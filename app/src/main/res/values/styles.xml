@@ -1,0 +1,12 @@
+<resources>
+    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#FFFFFF</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+    <string name="accessibility_description">Распознаёт меню питания Android, переключает выбранный VPN и показывает остров. При отдельно включённом живом преломлении получает изображение под островом: кадр используется только в памяти и освобождается после скрытия, не сохраняется и не отправляется. Защищённые окна недоступны. Автоматические нажатия ограничены выбранным VPN-клиентом. Кнопка питания напрямую недоступна обычным приложениям. Службу можно отключить в любой момент.</string>
+</resources>
