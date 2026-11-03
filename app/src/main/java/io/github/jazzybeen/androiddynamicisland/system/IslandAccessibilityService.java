@@ -134,6 +134,9 @@ public final class IslandAccessibilityService extends AccessibilityService {
         }
         for (int i = 0; i < node.getChildCount(); i++) { AccessibilityNodeInfo child = node.getChild(i); if (child != null) findDisconnect(child, output, count); }
     }
+    public void beginIslandNotice() { if(overlay!=null)overlay.beginNotice(); }
+    public void showOriginGuide() { if(overlay!=null)overlay.showOriginGuide(); }
+    public void showCompactIsland(String text,boolean connected) { main.post(()->{if(overlay!=null)overlay.showCompact(text,connected);}); }
     public void showIsland(String title, String text, boolean complete, boolean connected) { main.post(() -> { if (overlay != null) overlay.show(title, text, complete, connected); }); }
     public void hideIsland() { if (overlay != null) overlay.hide(); }
     @Override public void onInterrupt() { hideIsland(); }

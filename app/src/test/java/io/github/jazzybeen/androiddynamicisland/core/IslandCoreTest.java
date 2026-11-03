@@ -33,23 +33,76 @@ public class IslandCoreTest {
         assertEquals(VpnOperation.Result.WAITING, op.observe(true, false, 2000));
         assertEquals(VpnOperation.Result.DISCONNECTED, op.observe(false, false, 2200));
     }
-    @Test public void motionExpandsOnlyAfterSeventyPercentAndReversesExactly() {
-        IslandMotion.Frame before = IslandMotion.frame(IslandMotion.EXPAND_START, 34, 24, 320, 96, 8, false);
-        assertEquals(34, before.width(), .01);
-        assertEquals(24, before.height(), .01);
-        assertEquals(.7, (before.top() + before.height()) / before.height(), .001);
-        IslandMotion.Frame mid = IslandMotion.frame(210,34,24,320,96,8,false);
-        IslandMotion.Frame reverse = IslandMotion.frame(210,34,24,320,96,8,true);
-        assertTrue(mid.width() > 34 && mid.width() < 320);
-        assertEquals(mid.width(), reverse.width(), .001);
-        assertEquals(mid.top(), reverse.top(), .001);
+    private static IslandMotion.Geometry geometry(){return new IslandMotion.Geometry(180,18,22,22,180,340,82,0,210,36,180);}
+    @Test public void singleCapsuleStartsExactlyAtThePhysicalCutout() {
+        IslandMotion.Frame seed=IslandMotion.opening(0,geometry());
+        assertEquals(180,seed.centerX(),.001);assertEquals(7,seed.top(),.001);
+        assertEquals(22,seed.width(),.001);assertEquals(0,seed.alpha(),.001);
+        IslandMotion.Frame expanded=IslandMotion.opening(IslandMotion.OPEN+IslandMotion.SETTLE,geometry());
+        assertEquals(340,expanded.width(),.01);assertEquals(82,expanded.height(),.01);
+        assertEquals(1,expanded.contentAlpha(),.001);assertEquals(0,expanded.compact(),.001);
     }
     @Test public void softSqueezeSettlesToOriginalSize() {
-        IslandMotion.Frame peak = IslandMotion.frame(IslandMotion.OPEN + 70,34,24,320,96,8,false);
-        assertEquals(320 * .98, peak.width(), .01);
-        assertEquals(96 * 1.05, peak.height(), .01);
-        IslandMotion.Frame end = IslandMotion.frame(IslandMotion.OPEN + 200,34,24,320,96,8,false);
-        assertEquals(320,end.width(), .01); assertEquals(96,end.height(), .01);
+        IslandMotion.Frame peak=IslandMotion.opening(IslandMotion.OPEN+IslandMotion.SETTLE*.35,geometry());
+        assertEquals(340*.982,peak.width(),.01);assertEquals(82*1.045,peak.height(),.01);
+        IslandMotion.Frame end=IslandMotion.opening(IslandMotion.OPEN+IslandMotion.SETTLE,geometry());
+        assertEquals(340,end.width(),.01);assertEquals(82,end.height(),.01);
+    }
+    @Test public void expandedAndCompactLayoutsShareAContinuousSilhouette(){
+        IslandMotion.Frame shown=IslandMotion.opening(1000,geometry());
+        assertEquals(shown,IslandMotion.compacting(0,geometry()));
+        IslandMotion.Frame midway=IslandMotion.compacting(IslandMotion.MORPH/2,geometry());
+        assertTrue(midway.width()<340&&midway.width()>210);assertTrue(midway.compact()>0&&midway.compact()<1);
+        IslandMotion.Frame small=IslandMotion.compacting(IslandMotion.MORPH+IslandMotion.SETTLE,geometry());
+        assertEquals(210,small.width(),.01);assertEquals(36,small.height(),.01);assertEquals(1,small.compact(),.001);
+        IslandMotion.Frame hidden=IslandMotion.closing(IslandMotion.CLOSE,geometry(),small);
+        assertEquals(22,hidden.width(),.01);assertEquals(7,hidden.top(),.01);assertEquals(0,hidden.alpha(),.001);
+    }
+    @Test public void cameraDockDoesNotDropBetweenTheExpandedAndCompactStates(){
+        IslandMotion.Frame expanded=IslandMotion.opening(1000,geometry());
+        IslandMotion.Frame compact=IslandMotion.compacting(1000,geometry());
+        assertEquals(expanded.top(),compact.top(),.001);
+        assertEquals(geometry().cameraY(),compact.top()+compact.height()/2,.001);
+        for(int time=0;time<=1000;time+=20)assertEquals(expanded.top(),IslandMotion.compacting(time,geometry()).top(),.001);
+    }
+    @Test public void compactCapsuleBrieflyStretchesAndThenReturnsToItsRestingSize(){
+        IslandMotion.Frame peak=IslandMotion.compacting(IslandMotion.MORPH+IslandMotion.SETTLE*.35,geometry());
+        assertEquals(210*.982,peak.width(),.01);assertEquals(36*1.065,peak.height(),.01);
+        IslandMotion.Frame rest=IslandMotion.compacting(IslandMotion.MORPH+IslandMotion.SETTLE,geometry());
+        assertEquals(210,rest.width(),.01);assertEquals(36,rest.height(),.01);assertEquals(peak.top(),rest.top(),.001);
+    }
+    @Test public void compactDismissalStartsRetractionAfterSeventyPercentOfWidthContraction(){
+        IslandMotion.Frame small=IslandMotion.compacting(1000,geometry());
+        IslandMotion.Frame narrow=IslandMotion.closing(IslandMotion.RETRACT_START,geometry(),small);
+        double contracted=(small.width()-narrow.width())/(small.width()-geometry().seedWidth()*1.12);
+        assertEquals(.7,contracted,.002);
+        assertEquals(small.height(),narrow.height(),.001);assertEquals(1,narrow.alpha(),.001);
+        IslandMotion.Frame retract=IslandMotion.closing(IslandMotion.RETRACT_START+45,geometry(),small);
+        assertTrue(retract.height()<narrow.height());
+        assertTrue(retract.width()<narrow.width()&&retract.width()>geometry().seedWidth()*1.12);
+        assertEquals(0,IslandMotion.closing(IslandMotion.CLOSE,geometry(),small).alpha(),.001);
+    }
+    @Test public void expandedInsetMatchesBothSidesAndKeepsTheCameraInside(){
+        float top=IslandShape.dockTop(24,23,36,8),width=IslandShape.expandedWidth(392,top);
+        assertEquals(8,top,.001);assertEquals(top,(392-width)/2,.001);
+        assertTrue(24-23f/2>=top);assertTrue(24+23f/2<=top+36);
+    }
+    @Test public void reopenedIslandGetsASeparateShortStretch(){
+        IslandMotion.Frame opened=IslandMotion.opening(1000,geometry());
+        IslandMotion.Frame peak=IslandMotion.rebound(opened,IslandMotion.SETTLE*.35);
+        assertTrue(peak.height()>opened.height());assertTrue(peak.width()<opened.width());
+        assertEquals(opened,IslandMotion.rebound(opened,IslandMotion.SETTLE));
+    }
+    @Test public void interruptedEntranceDoesNotJumpToTheFullSizeWhenDismissed(){
+        IslandMotion.Frame partial=IslandMotion.opening(200,geometry());
+        IslandMotion.Frame firstClose=IslandMotion.closing(0,geometry(),partial);
+        assertEquals(partial,firstClose);
+    }
+    @Test public void rapidReopeningStartsAtTheCurrentPresentation(){
+        IslandMotion.Frame shown=IslandMotion.opening(1000,geometry());
+        IslandMotion.Frame partial=IslandMotion.closing(150,geometry(),shown);
+        assertEquals(partial,IslandMotion.blend(partial,shown,0));
+        assertEquals(shown,IslandMotion.blend(partial,shown,1));
     }
     @Test public void screenRadiusAcceptsEitherReportedCorner() {
         assertEquals(42,IslandShape.radius(42,0,true,32),.001);

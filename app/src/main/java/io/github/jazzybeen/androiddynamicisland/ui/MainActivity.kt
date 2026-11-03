@@ -59,6 +59,9 @@ class MainActivity:ComponentActivity(){
             else{settings.enabled(true);IslandService.ensureStarted(this);refresh();if(settings.embeddedVpn())authorizeVpn(true)else VpnCoordinator.get(this).toggle()}
         }
         "preview"->{if(IslandAccessibilityService.current()!=null)VpnCoordinator.get(this).preview()else showAccessibilityHelp()}
+        "originGuide"->{IslandAccessibilityService.current()?.showOriginGuide()}
+        "eventPreview"->{VpnCoordinator.get(this).notifyCompact("Тестовое оповещение",IslandVpnService.status.connected)}
+        "originPreview"->{if(IslandAccessibilityService.current()!=null){IslandAccessibilityService.current()?.hideIsland();VpnCoordinator.get(this).preview()}else showAccessibilityHelp()}
         "client"->{try{VpnClientBridge.open(this,false)}catch(_:RuntimeException){ClientPicker.show(this){refresh()}}}
         "accessibility"->showAccessibilityHelp()
         "listener"->AppDialogs.show(this,"Уведомления VPN","Этот доступ позволяет получать действие отключения из уведомления выбранного VPN. Уведомления других приложений не сохраняются.","Открыть настройки",{open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))})

@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.jazzybeen.androiddynamicisland"
         minSdk = 31
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.2.1"
     }
     if (signing.isNotEmpty()) signingConfigs.create("localRelease") {
         storeFile = rootProject.file(signing.getProperty("storeFile"))

@@ -61,7 +61,7 @@ object AppUi {
     BackHandler(tab!=0){tab=0}
     val enabled=remember(revision){settings.enabled()}
     val embedded=remember(revision){settings.embeddedVpn()}
-    val client=VpnClientBridge.selectedPackage(context)
+    val client=VpnClientBridge.iconPackage(context)
     Scaffold(containerColor=Color.Black,contentWindowInsets=WindowInsets(0,0,0,0),bottomBar={
         Column(Modifier.background(Color.Black).navigationBarsPadding()){
             HorizontalDivider(color=Color.White.copy(alpha=.1f),thickness=.5.dp)
@@ -130,6 +130,25 @@ object AppUi {
                             ActionRow("Быстрые настройки","Добавить плитку"){action.accept("tile")}
                         }
                         Caption("Чтобы вызывать остров без меню выключения, выбери его системным ассистентом и включи вызов ассистента удержанием питания в настройках телефона.")
+                        Section("ТОЧКА ПОЯВЛЕНИЯ"){
+                            var automatic by remember(revision){mutableStateOf(settings.autoOrigin())}
+                            SettingRow("Определять камеру автоматически",null){Switch(automatic,{automatic=it;settings.autoOrigin(it);action.accept("originGuide")},colors=SwitchDefaults.colors(checkedTrackColor=Green,checkedThumbColor=Color.White))}
+                            if(!automatic){
+                                SnapSlider("По горизонтали",settings.originX(),0,100,"%"){settings.originX(it);action.accept("originGuide")}
+                                SnapSlider("От верхнего края",settings.originY(),0,100,"dp"){settings.originY(it);action.accept("originGuide")}
+                            }
+                            TextRow("Показать маркер",Blue){action.accept("originGuide")}
+                            TextRow("Проверить появление",Blue){action.accept("originPreview")}
+                        }
+                        Caption("Совмести синий маркер с центром физической камеры. Остров закреплён на вырезе: при раскрытии и сжатии его верхняя граница остаётся на месте.")
+                        Section("КОРОТКИЕ ОПОВЕЩЕНИЯ"){
+                            var connectionAlerts by remember(revision){mutableStateOf(settings.connectionAlerts())}
+                            var idleAlerts by remember(revision){mutableStateOf(settings.idleAlerts())}
+                            SettingRow("Изменения соединения",null){Switch(connectionAlerts,{connectionAlerts=it;settings.connectionAlerts(it)},colors=SwitchDefaults.colors(checkedTrackColor=Green,checkedThumbColor=Color.White))}
+                            SettingRow("Нет передачи данных","После 20 секунд без трафика"){Switch(idleAlerts,{idleAlerts=it;settings.idleAlerts(it)},colors=SwitchDefaults.colors(checkedTrackColor=Green,checkedThumbColor=Color.White))}
+                            TextRow("Проверить оповещение",Blue){action.accept("eventPreview")}
+                        }
+                        Caption("Маленькие оповещения видны около двух секунд. Нулевой трафик — информация о простое; повторные сообщения ограничены, чтобы не отвлекать.")
                         Section("ОФОРМЛЕНИЕ"){
                             var corners by remember(revision){mutableStateOf(settings.autoCorners())}
                             SettingRow("Углы как у экрана",null){Switch(corners,{corners=it;settings.autoCorners(it)},colors=SwitchDefaults.colors(checkedTrackColor=Green,checkedThumbColor=Color.White))}
@@ -148,7 +167,7 @@ object AppUi {
                             ActionRow("Настроить заново",null){action.accept("setup")}
                             ActionRow("Информация",null){action.accept("details")}
                         }
-                        Caption("Версия 0.2.0\nБез снимков экрана и микрофона. Интернет используется для VPN и получения профиля.")
+                        Caption("Версия 0.2.1\nБез снимков экрана и микрофона. Интернет используется для VPN и получения профиля.")
                     }
                 }
             }
@@ -181,8 +200,9 @@ object AppUi {
     Column(Modifier.padding(horizontal=16.dp,vertical=12.dp)){Row{Label(title,13,modifier=Modifier.weight(1f));Label("${value.toInt()} $unit",12,Secondary)};Slider(value,{value=kotlin.math.round(it);onValue(value.toInt())},valueRange=min.toFloat()..max.toFloat(),steps=max-min-1,colors=SliderDefaults.colors(thumbColor=White,activeTrackColor=White,inactiveTrackColor=Color.White.copy(alpha=.12f)))}
 }
 @Composable fun VpnIcon(edge:Int=36,packageName:String?=null){
-    val context=LocalContext.current;val selected=packageName?:VpnClientBridge.selectedPackage(context)
-    val bitmap=remember(selected){try{val d=context.packageManager.getApplicationIcon(selected);Bitmap.createBitmap(96,96,Bitmap.Config.ARGB_8888).also{d.setBounds(0,0,96,96);d.draw(NativeCanvas(it))}.asImageBitmap()}catch(_:Exception){null}}
+    val context=LocalContext.current;val selected=packageName?:VpnClientBridge.iconPackage(context)
+    val pixelEdge=kotlin.math.round(edge*context.resources.displayMetrics.density).toInt().coerceIn(96,256)
+    val bitmap=remember(selected,pixelEdge){try{val d=context.packageManager.getApplicationIcon(selected);Bitmap.createBitmap(pixelEdge,pixelEdge,Bitmap.Config.ARGB_8888).also{d.setBounds(0,0,pixelEdge,pixelEdge);d.draw(NativeCanvas(it))}.asImageBitmap()}catch(_:Exception){null}}
     if(bitmap!=null)Image(bitmap,null,Modifier.size(edge.dp))else Canvas(Modifier.size(edge.dp)){
         drawArc(White, -45f,270f,false,Offset(size.width*.15f,size.height*.15f),androidx.compose.ui.geometry.Size(size.width*.7f,size.height*.7f),style=Stroke(2.dp.toPx(),cap=StrokeCap.Round))
         drawLine(White,Offset(size.width*.5f,size.height*.05f),Offset(size.width*.5f,size.height*.5f),2.dp.toPx(),StrokeCap.Round)
@@ -193,7 +213,11 @@ object AppUi {
     val insets=(context as? Activity)?.window?.decorView?.rootWindowInsets;val density=context.resources.displayMetrics.density
     val radius=IslandShape.radius((insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius?:0)/density,(insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)?.radius?:0)/density,settings.autoCorners(),settings.corners().toFloat())
     Box(modifier.background(Color.Black,RoundedCornerShape(radius.dp))){
-        Row(Modifier.align(Alignment.BottomStart).padding(18.dp),verticalAlignment=Alignment.CenterVertically){VpnIcon(32,client);Spacer(Modifier.width(12.dp));Column{Label("VPN",15,bold=true);Label(if(connected)"Подключено" else "Готов к работе",12,if(connected)Green else Secondary)}}
+        Row(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically){
+            CountryFlag(settings.vpnCountryCode(),46);Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)){Label(settings.vpnCountry(),13,Secondary);Label(if(connected)settings.vpnCity()else"Готов к работе",19,bold=true)}
+            Box(Modifier.size(44.dp).background(Color(0xFFFF3B30),RoundedCornerShape(50)),contentAlignment=Alignment.Center){Label("×",32)}
+        }
     }
 }
 @Composable private fun AppGlyph(kind:Int,color:Color){Canvas(Modifier.size(24.dp)){

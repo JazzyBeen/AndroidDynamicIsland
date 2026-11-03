@@ -7,6 +7,8 @@ import android.net.*
 import android.os.*
 import io.github.jazzybeen.androiddynamicisland.R
 import io.github.jazzybeen.androiddynamicisland.data.VpnProfileStore
+import io.github.jazzybeen.androiddynamicisland.data.VpnLocation
+import io.github.jazzybeen.androiddynamicisland.data.IslandSettings
 import io.github.jazzybeen.androiddynamicisland.ui.MainActivity
 import io.github.jazzybeen.androiddynamicisland.vpn.VpnCoordinator
 import io.nekohasekai.libbox.*
@@ -25,10 +27,10 @@ class IslandVpnService:VpnService(){
     private var platform:TunnelPlatform?=null
     @Volatile private var stopping=false
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
-        if(intent?.action==STOP){stopping=true;setStatus(TunnelStatus(busy=true,message="Отключение…"));worker.execute{closeTunnel();setStatus(TunnelStatus(message="Отключено"));stopSelf()};return START_NOT_STICKY}
+        if(intent?.action==STOP){expectedStop=true;IslandSettings(this).expectedConnected(false);stopping=true;setStatus(TunnelStatus(busy=true,message="Отключение…"));worker.execute{closeTunnel();setStatus(TunnelStatus(message="Отключено"));stopSelf()};return START_NOT_STICKY}
         if(intent?.action!=START){stopSelf();return START_NOT_STICKY}
         if(engine!=null||status.busy)return START_NOT_STICKY
-        stopping=false;setStatus(TunnelStatus(busy=true,message="Подключение…"))
+        stopping=false;expectedStop=false;setStatus(TunnelStatus(busy=true,message="Подключение…"))
         val notice=notification("Подключение…")
         if(Build.VERSION.SDK_INT>=34){
             try{startForeground(21,notice,ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)}
@@ -39,10 +41,12 @@ class IslandVpnService:VpnService(){
             try{
                 check(prepare(this)==null){"VPN permission required"}
                 var profile=VpnProfileStore(this).read()?:error("No profile")
+                VpnLocation.remember(this,profile);IslandSettings(this).responseTime(-1)
                 val provider=profile.optJSONObject("provider")
                 if(provider!=null&&System.currentTimeMillis()-profile.optLong("fetchedAt")>6*60*60*1000){
                     profile=ProviderApi.load(provider.getString("host"),provider.getString("key"),provider.getString("deviceId"),provider.optString("locationId"),provider.optString("gatewayName")).put("fetchedAt",System.currentTimeMillis())
                     VpnProfileStore(this).write(profile)
+                    VpnLocation.remember(this,profile)
                 }
                 if(stopping)return@execute
                 stage="запуск ядра"
@@ -78,7 +82,7 @@ class IslandVpnService:VpnService(){
             if(stopping)return false
             try{
                 val connection=tunnel.openConnection(URI(endpoint).toURL()) as HttpURLConnection
-                try{connection.connectTimeout=7000;connection.readTimeout=7000;connection.instanceFollowRedirects=false;val code=connection.responseCode;if(code==204)return true;probeFailure="http-$code"}finally{connection.disconnect()}
+                try{connection.connectTimeout=7000;connection.readTimeout=7000;connection.instanceFollowRedirects=false;val began=SystemClock.elapsedRealtime();val code=connection.responseCode;if(code==204){IslandSettings(this).responseTime((SystemClock.elapsedRealtime()-began).toInt().coerceAtLeast(1));return true};probeFailure="http-$code"}finally{connection.disconnect()}
             }catch(error:Exception){
                 var root:Throwable=error;while(root.cause!=null&&root.cause!==root)root=root.cause!!
                 probeFailure=error.javaClass.simpleName+"/"+root.javaClass.simpleName+(if(root is android.system.ErrnoException)"/errno-${root.errno}"else"")
@@ -102,6 +106,7 @@ class IslandVpnService:VpnService(){
         private const val START="island.vpn.START"
         private const val STOP="island.vpn.STOP"
         @Volatile var status=TunnelStatus();private set
+        @Volatile var expectedStop=false;private set
         fun start(context:Context){context.startForegroundService(Intent(context,IslandVpnService::class.java).setAction(START))}
         fun stop(context:Context){context.startService(Intent(context,IslandVpnService::class.java).setAction(STOP))}
     }

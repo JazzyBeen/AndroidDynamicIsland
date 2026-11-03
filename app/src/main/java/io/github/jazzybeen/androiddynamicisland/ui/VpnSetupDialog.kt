@@ -62,6 +62,7 @@ object VpnSetupDialog{
                                     Libbox.checkConfig(TunnelConfig.runtime(profile))
                                     currentCoroutineContext().ensureActive()
                                     profile.put("fetchedAt",System.currentTimeMillis());VpnProfileStore(activity).write(profile)
+                                    VpnLocation.remember(activity,profile)
                                     IslandSettings(activity).apply{embeddedVpn(true);vpnName(profile.optString("name","Мой VPN"))}
                                     null
                                 }catch(error:CancellationException){throw error}catch(_:Exception){"Не удалось проверить профиль. Проверь адрес API, ключ или формат конфигурации."}

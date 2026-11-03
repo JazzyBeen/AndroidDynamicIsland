@@ -13,6 +13,12 @@ public final class VpnClientBridge {
     private static final String CONNECT="org.interhive.kitten_vpn_engine.extra.CONNECT_ON_LAUNCH";
     private VpnClientBridge(){}
     public static String selectedPackage(Context context){IslandSettings settings=new IslandSettings(context);return settings.embeddedVpn()?context.getPackageName():settings.vpnPackage();}
+    /** Branding stays independent from the process that owns the embedded tunnel. */
+    public static String iconPackage(Context context){
+        IslandSettings settings=new IslandSettings(context);String preferred=settings.vpnPackage();
+        if(settings.embeddedVpn()&&!preferred.isEmpty())try{context.getPackageManager().getApplicationInfo(preferred,0);return preferred;}catch(PackageManager.NameNotFoundException ignored){}
+        return selectedPackage(context);
+    }
     public static boolean installed(Context context){
         if(new IslandSettings(context).embeddedVpn())return new io.github.jazzybeen.androiddynamicisland.data.VpnProfileStore(context).exists();
         String name=selectedPackage(context);if(name.isEmpty())return false;

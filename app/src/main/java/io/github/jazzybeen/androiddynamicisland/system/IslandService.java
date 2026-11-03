@@ -12,6 +12,7 @@ import io.github.jazzybeen.androiddynamicisland.vpn.VpnCoordinator;
 public final class IslandService extends Service {
     public static final String STOP = "io.github.jazzybeen.androiddynamicisland.STOP";
     private ConnectivityManager connectivity;
+    private VpnWatchdog watchdog;
     private final ConnectivityManager.NetworkCallback callback = new ConnectivityManager.NetworkCallback() {
         @Override public void onAvailable(Network network) { changed(); }
         @Override public void onLost(Network network) { changed(); }
@@ -38,6 +39,7 @@ public final class IslandService extends Service {
         startForeground(11, notification);
         connectivity = getSystemService(ConnectivityManager.class);
         connectivity.registerNetworkCallback(new NetworkRequest.Builder().clearCapabilities().build(), callback);
+        watchdog=new VpnWatchdog(this);watchdog.start();
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && STOP.equals(intent.getAction())) {
@@ -49,6 +51,6 @@ public final class IslandService extends Service {
         if (!new IslandSettings(this).enabled()) { stopSelf(); return START_NOT_STICKY; }
         return START_STICKY;
     }
-    @Override public void onDestroy() { if (connectivity != null) connectivity.unregisterNetworkCallback(callback); super.onDestroy(); }
+    @Override public void onDestroy() { if(watchdog!=null)watchdog.close();if (connectivity != null) connectivity.unregisterNetworkCallback(callback); super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }
 }

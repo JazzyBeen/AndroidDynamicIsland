@@ -12,6 +12,24 @@ public final class IslandSettings {
     public void embeddedVpn(boolean value) { prefs.edit().putBoolean("embeddedVpn",value).apply(); }
     public String vpnName() { return prefs.getString("vpnName","Мой VPN"); }
     public void vpnName(String value) { prefs.edit().putString("vpnName",value).apply(); }
+    public void location(String code,String country,String city) { prefs.edit().putString("vpnCountryCode",code).putString("vpnCountry",country).putString("vpnCity",city).apply(); }
+    public String vpnCountryCode() { return prefs.getString("vpnCountryCode",""); }
+    public String vpnCountry() { return prefs.getString("vpnCountry",vpnName()); }
+    public String vpnCity() { return prefs.getString("vpnCity","Мой сервер"); }
+    public int responseTime() { return prefs.getInt("vpnResponseTime",-1); }
+    public void responseTime(int value) { prefs.edit().putInt("vpnResponseTime",value).apply(); }
+    public boolean autoOrigin() { return prefs.getBoolean("autoOrigin",true); }
+    public void autoOrigin(boolean value) { prefs.edit().putBoolean("autoOrigin",value).apply(); }
+    public int originX() { return prefs.getInt("originX",50); }
+    public void originX(int value) { prefs.edit().putInt("originX",Math.max(0,Math.min(100,value))).apply(); }
+    public int originY() { return prefs.getInt("originY",18); }
+    public void originY(int value) { prefs.edit().putInt("originY",Math.max(0,Math.min(100,value))).apply(); }
+    public boolean expectedConnected() { return prefs.getBoolean("expectedConnected",false); }
+    public void expectedConnected(boolean value) { prefs.edit().putBoolean("expectedConnected",value).apply(); }
+    public boolean connectionAlerts() { return prefs.getBoolean("connectionAlerts",true); }
+    public void connectionAlerts(boolean value) { prefs.edit().putBoolean("connectionAlerts",value).apply(); }
+    public boolean idleAlerts() { return prefs.getBoolean("idleAlerts",true); }
+    public void idleAlerts(boolean value) { prefs.edit().putBoolean("idleAlerts",value).apply(); }
     public String providerDeviceId() {
         String value=prefs.getString("providerDeviceId","");
         if(value.isEmpty()){value=java.util.UUID.randomUUID().toString().replace("-","")+java.util.UUID.randomUUID().toString().replace("-","");prefs.edit().putString("providerDeviceId",value).apply();}

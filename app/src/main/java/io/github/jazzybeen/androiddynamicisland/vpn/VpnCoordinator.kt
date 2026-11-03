@@ -22,6 +22,7 @@ class VpnCoordinator private constructor(private val context:Context){
     val state:StateFlow<VpnStatus> = mutableState
     private var operation:VpnOperation?=null
     private var lastCommand=-5000L
+    private var wasEmbeddedConnected=false
     private val poll=Runnable{observe()}
     fun message()=mutableState.value.message
     fun busy()=operation!=null||IslandVpnService.status.busy
@@ -29,12 +30,13 @@ class VpnCoordinator private constructor(private val context:Context){
         val manager=context.getSystemService(ConnectivityManager::class.java)?:return false
         return manager.allNetworks.any{manager.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN)==true}
     }
-    fun clientChanged(){main.removeCallbacks(poll);operation=null;mutableState.value=VpnStatus(false,false,"Подключение настроено");refresh()}
+    fun clientChanged(){main.removeCallbacks(poll);operation=null;IslandSettings(context).expectedConnected(false);mutableState.value=VpnStatus(false,false,"Подключение настроено");refresh()}
     fun refresh(){main.post{if(IslandSettings(context).embeddedVpn()){val s=IslandVpnService.status;mutableState.value=VpnStatus(s.connected,s.busy,s.message)}else if(operation!=null)observe()else{val connected=anyVpn();val old=mutableState.value;mutableState.value=old.copy(connected=connected,message=if(old.connected!=connected)if(connected)"Подключение активно"else"Готов к подключению" else old.message)}}}
     fun toggle(){main.post{begin()}}
     private fun begin(){
         if(busy()||SystemClock.elapsedRealtime()-lastCommand<1600)return
         lastCommand=SystemClock.elapsedRealtime()
+        IslandAccessibilityService.current()?.beginIslandNotice()
         if(!IslandSettings(context).enabled()){announce("Остров выключен — включи его в приложении",true,false);return}
         if(IslandSettings(context).embeddedVpn()){
             if(!io.github.jazzybeen.androiddynamicisland.data.VpnProfileStore(context).exists()){announce("Добавь VPN-профиль в приложении",true,false);return}
@@ -64,8 +66,16 @@ class VpnCoordinator private constructor(private val context:Context){
             else->{operation=null;IslandAccessibilityService.current()?.cancelClientAction();announce("Не удалось подтвердить — открой VPN-приложение",true,connected)}
         }
     }
-    fun embeddedChanged(value:TunnelStatus){main.post{if(IslandSettings(context).embeddedVpn())announce(value.message,!value.busy,value.connected)}}
-    fun preview(){main.post{val connected=if(IslandSettings(context).embeddedVpn())IslandVpnService.status.connected else anyVpn();announce(if(connected)"Подключено · предпросмотр"else"Готов к работе · предпросмотр",true,connected)}}
+    fun embeddedChanged(value:TunnelStatus){main.post{
+        if(IslandSettings(context).embeddedVpn()){
+            val unexpected=wasEmbeddedConnected&&!value.connected&&!value.busy&&!IslandVpnService.expectedStop
+            if(value.connected){wasEmbeddedConnected=true;IslandSettings(context).expectedConnected(true)}else if(!value.busy){wasEmbeddedConnected=false;IslandSettings(context).expectedConnected(false)}
+            if(unexpected){mutableState.value=VpnStatus(false,false,value.message);if(IslandSettings(context).connectionAlerts())notifyCompact("VPN отключился",false)}
+            else announce(value.message,!value.busy,value.connected)
+        }
+    }}
+    fun notifyCompact(message:String,connected:Boolean){main.post{if(IslandSettings(context).enabled())IslandAccessibilityService.current()?.showCompactIsland(message,connected)}}
+    fun preview(){main.post{IslandAccessibilityService.current()?.beginIslandNotice();val connected=if(IslandSettings(context).embeddedVpn())IslandVpnService.status.connected else anyVpn();announce(if(connected)"Подключено · предпросмотр"else"Готов к работе · предпросмотр",true,connected)}}
     private fun announce(message:String,complete:Boolean,connected:Boolean){
         mutableState.value=VpnStatus(connected,!complete,message)
         IslandAccessibilityService.current()?.showIsland("VPN",message,complete,connected)

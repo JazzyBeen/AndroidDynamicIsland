@@ -20,7 +20,7 @@ object ProviderApi{
         val gateway=(0 until gateways.length()).map{gateways.getJSONObject(it)}.firstOrNull{it.optString("name")==gatewayName}?:gateways.getJSONObject(0)
         val result=JSONObject(request("$origin/api/v1/public/connection/connect?gate_id=${encode(location.optString("id"))}&gateway_name=${encode(gateway.getString("name"))}",key,deviceId))
         val configuration=result.get("configuration").let{if(it is JSONObject)it else JSONObject(it.toString())}
-        return TunnelConfig.importProfile(configuration.toString()).put("name",location.optString("name","Мой VPN")).put("provider",JSONObject().put("host",origin).put("key",key).put("deviceId",deviceId).put("locationId",location.optString("id")).put("gatewayName",gateway.getString("name"))).put("expiration",result.optString("expiration_at"))
+        return TunnelConfig.importProfile(configuration.toString()).put("name",location.optString("name","Мой VPN")).put("countryCode",location.optString("shortname")).put("city",gateway.optString("city",location.optJSONObject("meta")?.optString("city").orEmpty())).put("provider",JSONObject().put("host",origin).put("key",key).put("deviceId",deviceId).put("locationId",location.optString("id")).put("gatewayName",gateway.getString("name"))).put("expiration",result.optString("expiration_at"))
     }
     private fun request(url:String,key:String,deviceId:String):String{
         val connection=URI(url).toURL().openConnection() as HttpURLConnection
