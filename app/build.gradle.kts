@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.jazzybeen.androiddynamicisland"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
     if (signing.isNotEmpty()) signingConfigs.create("localRelease") {
         storeFile = rootProject.file(signing.getProperty("storeFile"))
@@ -24,7 +24,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),"proguard-rules.pro")
             if (signing.isNotEmpty()) signingConfig = signingConfigs.getByName("localRelease")
         }
     }
@@ -33,10 +33,11 @@ android {
     lint { abortOnError = true }
 }
 dependencies {
-    implementation("io.github.kyant0:backdrop:1.0.1")
+    implementation(files(rootProject.file("local/libbox.aar")))
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.compose.foundation:foundation:1.9.5")
     implementation("androidx.compose.ui:ui:1.9.5")
     implementation("androidx.compose.material3:material3:1.4.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20250517")
 }

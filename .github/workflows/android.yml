@@ -13,7 +13,19 @@ jobs:
         with:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
-      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.8'
+          cache: false
+      - uses: actions/cache@v4
+        id: vpn-core
+        with:
+          path: local/libbox.aar
+          key: libbox-1.12.25-ndk28-${{ hashFiles('scripts/BuildVpnCore.ps1') }}
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.0.13004108'
+      - if: steps.vpn-core.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: ./scripts/BuildVpnCore.ps1 -AndroidHome $env:ANDROID_HOME -NdkHome (Join-Path $env:ANDROID_HOME 'ndk/28.0.13004108')
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew && ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
       - uses: actions/upload-artifact@v4

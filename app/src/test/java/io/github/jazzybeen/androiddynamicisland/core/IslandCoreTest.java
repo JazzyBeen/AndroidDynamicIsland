@@ -60,4 +60,23 @@ public class IslandCoreTest {
         assertEquals(32,IslandShape.radius(0,0,true,32),.001);
         assertEquals(28,IslandShape.radius(42,42,false,28),.001);
     }
+    @Test public void hyperOsSliderWithNoResourceIdsIsRecognized(){
+        assertTrue(PowerMenuGate.isPowerMenu("miui.systemui.plugin","android.widget.FrameLayout","[system-power-slider] Слайдер выключения питания Выключение Перезагрузка"));
+        assertFalse(PowerMenuGate.isPowerMenu("miui.systemui.plugin","android.widget.FrameLayout","Выключение Перезагрузка"));
+        assertFalse(PowerMenuGate.isPowerMenu("some.app","android.widget.FrameLayout","[system-power-slider] Выключение Перезагрузка"));
+    }
+    @Test public void knownPowerControlMatchesTheObservedPhoneLayout(){
+        assertTrue(VpnButtonShape.matches(320,850,760,1290,1080,2400));
+        assertFalse(VpnButtonShape.matches(904,160,1036,292,1080,2400));
+        assertFalse(VpnButtonShape.matches(452,2012,628,2188,1080,2400));
+        assertFalse(VpnButtonShape.matches(44,424,1036,628,1080,2400));
+    }
+    @Test public void explicitDismissalAllowsNextMenuWhenFirmwareOmitsHiddenEvent(){
+        PowerMenuGate gate=new PowerMenuGate();
+        assertTrue(gate.update("miui.systemui.plugin","FrameLayout","[system-power-slider] Выключение Перезагрузка",2000));
+        gate.dismissed();
+        assertFalse(gate.update("miui.systemui.plugin","FrameLayout","[system-power-slider] Выключение Перезагрузка",2500));
+        gate.dismissed();
+        assertTrue(gate.update("miui.systemui.plugin","FrameLayout","[system-power-slider] Выключение Перезагрузка",4500));
+    }
 }

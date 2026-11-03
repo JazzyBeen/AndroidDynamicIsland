@@ -1,0 +1,6 @@
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="io.github.jazzybeen.androiddynamicisland.system.IslandAssistantSessionService"
+    android:recognitionService="io.github.jazzybeen.androiddynamicisland.system.NoAudioRecognitionService"
+    android:settingsActivity="io.github.jazzybeen.androiddynamicisland.ui.MainActivity"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />

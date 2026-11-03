@@ -8,12 +8,19 @@ public final class IslandSettings {
     public IslandSettings(Context context) { prefs = context.getSharedPreferences("island", Context.MODE_PRIVATE); }
     public String vpnPackage() { return prefs.getString("vpnPackage", ""); }
     public void vpnPackage(String value) { prefs.edit().putString("vpnPackage", value == null ? "" : value).apply(); }
+    public boolean embeddedVpn() { return prefs.getBoolean("embeddedVpn",false); }
+    public void embeddedVpn(boolean value) { prefs.edit().putBoolean("embeddedVpn",value).apply(); }
+    public String vpnName() { return prefs.getString("vpnName","Мой VPN"); }
+    public void vpnName(String value) { prefs.edit().putString("vpnName",value).apply(); }
+    public String providerDeviceId() {
+        String value=prefs.getString("providerDeviceId","");
+        if(value.isEmpty()){value=java.util.UUID.randomUUID().toString().replace("-","")+java.util.UUID.randomUUID().toString().replace("-","");prefs.edit().putString("providerDeviceId",value).apply();}
+        return value;
+    }
     public int margin() { return prefs.getInt("margin", 10); }
     public void margin(int value) { prefs.edit().putInt("margin", Math.max(4, Math.min(24,value))).apply(); }
     public boolean autoCorners() { return prefs.getBoolean("autoCorners",true); }
     public void autoCorners(boolean value) { prefs.edit().putBoolean("autoCorners",value).apply(); }
-    public boolean liveBackdrop() { return prefs.getBoolean("liveBackdrop",false); }
-    public void liveBackdrop(boolean value) { prefs.edit().putBoolean("liveBackdrop",value).apply(); }
     public int corners() { return prefs.getInt("corners",32); }
     public void corners(int value) { prefs.edit().putInt("corners",Math.max(12,Math.min(56,value))).apply(); }
     public boolean enabled() { return prefs.getBoolean("enabled", false); }

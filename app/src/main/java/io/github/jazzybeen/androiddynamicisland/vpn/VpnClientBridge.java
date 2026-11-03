@@ -12,12 +12,14 @@ public final class VpnClientBridge {
     private static final String NATIVE_CONNECT_PACKAGE="org.interhive.sota.connect";
     private static final String CONNECT="org.interhive.kitten_vpn_engine.extra.CONNECT_ON_LAUNCH";
     private VpnClientBridge(){}
-    public static String selectedPackage(Context context){return new IslandSettings(context).vpnPackage();}
+    public static String selectedPackage(Context context){IslandSettings settings=new IslandSettings(context);return settings.embeddedVpn()?context.getPackageName():settings.vpnPackage();}
     public static boolean installed(Context context){
+        if(new IslandSettings(context).embeddedVpn())return new io.github.jazzybeen.androiddynamicisland.data.VpnProfileStore(context).exists();
         String name=selectedPackage(context);if(name.isEmpty())return false;
         try{context.getPackageManager().getPackageInfo(name,0);return true;}catch(PackageManager.NameNotFoundException e){return false;}
     }
     public static String label(Context context){
+        if(new IslandSettings(context).embeddedVpn())return new IslandSettings(context).vpnName();
         try{return context.getPackageManager().getApplicationLabel(context.getPackageManager().getApplicationInfo(selectedPackage(context),0)).toString();}
         catch(PackageManager.NameNotFoundException e){return "Выберите VPN-приложение";}
     }
@@ -35,7 +37,7 @@ public final class VpnClientBridge {
     }
     public static void connect(Context context){
         if(sendNotificationAction(true))return;
-        if(NATIVE_CONNECT_PACKAGE.equals(selectedPackage(context))){open(context,true);return;}
+        if(NATIVE_CONNECT_PACKAGE.equals(selectedPackage(context))){open(context,true);IslandAccessibilityService available=IslandAccessibilityService.current();if(available!=null)available.requestClientAction(true,false);return;}
         IslandAccessibilityService service=IslandAccessibilityService.current();
         if(service==null){open(context,false);return;}
         service.requestClientAction(true);
@@ -51,7 +53,7 @@ public final class VpnClientBridge {
         PackageManager pm=context.getPackageManager();List<Client> clients=new ArrayList<>();Set<String> seen=new HashSet<>();
         Intent launcher=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
         for(ResolveInfo item:pm.queryIntentActivities(launcher,0)){
-            String name=item.activityInfo.packageName;if(!seen.add(name))continue;
+            String name=item.activityInfo.packageName;if(name.equals(context.getPackageName())||!seen.add(name))continue;
             try{
                 PackageInfo info=pm.getPackageInfo(name,PackageManager.GET_SERVICES);
                 if(info.services==null)continue;

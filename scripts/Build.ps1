@@ -18,5 +18,5 @@ try{
     try{& .\gradlew.bat @tasks --console=plain;if($LASTEXITCODE){throw 'Android build failed'}}finally{Pop-Location}
     $kind=if($Release){'release'}else{'debug'}
     $file=Join-Path $root ('app\build\outputs\apk\'+$kind+'\app-'+$kind+'.apk')
-    if(Test-Path -LiteralPath $file){$out=Join-Path $root 'artifacts';New-Item -ItemType Directory -Path $out -Force | Out-Null;Copy-Item -LiteralPath $file -Destination (Join-Path $out ('AndroidDynamicIsland-0.1.0-'+$kind+'.apk')) -Force;Write-Output ('APK: '+$file)}
+    if(Test-Path -LiteralPath $file){$version=[regex]::Match((Get-Content -LiteralPath (Join-Path $root 'app\build.gradle.kts') -Raw),'versionName\s*=\s*"([^"]+)"').Groups[1].Value;$out=Join-Path $root 'artifacts';New-Item -ItemType Directory -Path $out -Force | Out-Null;Copy-Item -LiteralPath $file -Destination (Join-Path $out ('AndroidDynamicIsland-'+$version+'-'+$kind+'.apk')) -Force;Write-Output ('APK: '+$file)}
 }finally{$env:JAVA_HOME=$oldJava;$env:GRADLE_USER_HOME=$oldCache;$env:JAVA_TOOL_OPTIONS=$oldOptions}

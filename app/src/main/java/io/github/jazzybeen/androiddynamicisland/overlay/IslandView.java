@@ -8,13 +8,12 @@ import android.widget.FrameLayout;
 import io.github.jazzybeen.androiddynamicisland.core.IslandMotion;
 import io.github.jazzybeen.androiddynamicisland.core.IslandShape;
 import io.github.jazzybeen.androiddynamicisland.data.IslandSettings;
-import io.github.jazzybeen.androiddynamicisland.glass.LiquidIsland;
 
-/** Native compositor retains the desktop timing and temporal blur around a glass Compose surface. */
+/** Native compositor retains the emergence, settling and temporal motion blur of the black island. */
 public final class IslandView extends FrameLayout {
     private final Paint add = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final IslandSettings settings;
-    private final LiquidIsland glass;
+    private final IslandContent surface;
     private long appeared, dismissAt;
     private boolean running, complete, pendingStart;
     private Rect camera;
@@ -25,12 +24,11 @@ public final class IslandView extends FrameLayout {
     private final float density;
     private Runnable onHidden;
     public void setOnNoticeHidden(Runnable callback){onHidden=callback;}
-    public void setBackdrop(Bitmap bitmap){glass.setBackdrop(bitmap,top,top);invalidate();}
     public IslandView(Context context) {
         super(context); settings = new IslandSettings(context); density = getResources().getDisplayMetrics().density;
         setClipChildren(false); setClipToPadding(false); setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         add.setBlendMode(BlendMode.PLUS);
-        glass = new LiquidIsland(context); glass.attachToRoot(this);addView(glass.getView(),new LayoutParams(Math.round(dp(320)),Math.round(dp(96))));
+        surface = new IslandContent(context); surface.attachToRoot(this);addView(surface.getView(),new LayoutParams(Math.round(dp(320)),Math.round(dp(96))));
         setOnApplyWindowInsetsListener((v,insets) -> {
             RoundedCorner left=insets.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT),right=insets.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT);
             screenRadius=IslandShape.radius(left==null?0:left.getRadius(),right==null?0:right.getRadius(),true,0);
@@ -49,9 +47,9 @@ public final class IslandView extends FrameLayout {
         smallWidth=Math.max(dp(34),camera==null?dp(34):camera.width()+dp(12));
         float radius=IslandShape.radius(screenRadius,0,settings.autoCorners(),dp(settings.corners()));
         faceWidth=Math.max(dp(120),getWidth()-2*top);faceHeight=Math.max(Math.max(dp(112),smallHeight+dp(64)),radius*2);
-        LayoutParams params=(LayoutParams)glass.getView().getLayoutParams();int w=(int)faceWidth,h=(int)faceHeight;
-        if(params.width!=w||params.height!=h){params.width=w;params.height=h;glass.getView().setLayoutParams(params);}
-        glass.update(lastTitle,lastText,complete,lastConnected,smallHeight/density,radius/density);
+        LayoutParams params=(LayoutParams)surface.getView().getLayoutParams();int w=(int)faceWidth,h=(int)faceHeight;
+        if(params.width!=w||params.height!=h){params.width=w;params.height=h;surface.getView().setLayoutParams(params);}
+        surface.update(lastTitle,lastText,complete,lastConnected,smallHeight/density,radius/density);
         invalidate();
     }
     public void showNotice(String title,String text,boolean complete,boolean connected){
@@ -70,12 +68,12 @@ public final class IslandView extends FrameLayout {
         boolean moving=Math.abs(current.width()-trail.width())+Math.abs(current.height()-trail.height())+Math.abs(current.top()-trail.top())>.1f;
         if(moving&&settings.blur()>0){
             int accumulation=canvas.saveLayer(0,0,getWidth(),getHeight(),null);int remainder=255;
-            for(int i=4;i>=0;i--){int alpha=i==0?remainder:255/5;remainder-=alpha;add.setAlpha(alpha);int sample=canvas.saveLayer(0,0,getWidth(),getHeight(),add);drawGlass(canvas,frame(now-settings.blur()*i/4));canvas.restoreToCount(sample);}
+            for(int i=4;i>=0;i--){int alpha=i==0?remainder:255/5;remainder-=alpha;add.setAlpha(alpha);int sample=canvas.saveLayer(0,0,getWidth(),getHeight(),add);drawSurface(canvas,frame(now-settings.blur()*i/4));canvas.restoreToCount(sample);}
             canvas.restoreToCount(accumulation);
-        }else drawGlass(canvas,current);
+        }else drawSurface(canvas,current);
         if(moving||now-appeared<openMs()+IslandMotion.SETTLE||now>=dismissAt)postInvalidateOnAnimation();
         else if(complete)postInvalidateDelayed(Math.max(1,dismissAt-now));
     }
-    private void drawGlass(android.graphics.Canvas canvas,IslandMotion.Frame frame){int save=canvas.save();canvas.translate(centerX-frame.width()/2,frame.top());canvas.scale(frame.width()/faceWidth,frame.height()/faceHeight);super.dispatchDraw(canvas);canvas.restoreToCount(save);}
-    @Override protected void onDetachedFromWindow(){hideNotice();glass.close();super.onDetachedFromWindow();}
+    private void drawSurface(android.graphics.Canvas canvas,IslandMotion.Frame frame){int save=canvas.save();canvas.translate(centerX-frame.width()/2,frame.top());canvas.scale(frame.width()/faceWidth,frame.height()/faceHeight);super.dispatchDraw(canvas);canvas.restoreToCount(save);}
+    @Override protected void onDetachedFromWindow(){hideNotice();surface.close();super.onDetachedFromWindow();}
 }
