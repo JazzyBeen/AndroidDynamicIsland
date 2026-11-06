@@ -5,6 +5,7 @@ import android.net.*
 import android.os.*
 import io.github.jazzybeen.androiddynamicisland.core.TrafficIdleGate
 import io.github.jazzybeen.androiddynamicisland.data.IslandSettings
+import io.github.jazzybeen.androiddynamicisland.vpn.VpnAutoConnect
 import io.github.jazzybeen.androiddynamicisland.vpn.VpnCoordinator
 import io.github.jazzybeen.androiddynamicisland.vpn.embedded.IslandVpnService
 
@@ -15,6 +16,8 @@ class VpnWatchdog(context:Context):AutoCloseable{
     private lateinit var handler:Handler
     private val idle=TrafficIdleGate()
     private var offline=false
+    /** No network while the tunnel is down; its return is the moment to reconnect. */
+    private var idleOffline=false
     private var startedAt=0L
     @Volatile private var closed=false
     private val tick=object:Runnable{
@@ -28,16 +31,18 @@ class VpnWatchdog(context:Context):AutoCloseable{
     private fun sample(){
         val settings=IslandSettings(context);val status=IslandVpnService.status;val now=SystemClock.elapsedRealtime()
         if(!settings.enabled()||!settings.embeddedVpn()){idle.sample(-1,false,now);offline=false;return}
+        val online=VpnAutoConnect.online(context)
+        if(online&&idleOffline)VpnAutoConnect.networkReturned()
         if(!status.connected){
-            idle.sample(-1,false,now);offline=false
+            idle.sample(-1,false,now);offline=false;idleOffline=!online
             if(!status.busy&&settings.expectedConnected()&&now-startedAt>5000){
                 settings.expectedConnected(false)
                 if(settings.connectionAlerts())VpnCoordinator.get(context).notifyCompact("VPN отключился",false)
             }
+            VpnAutoConnect.check(context,online)
             return
         }
-        val connectivity=context.getSystemService(ConnectivityManager::class.java)
-        val online=connectivity.allNetworks.any{n->connectivity.getNetworkCapabilities(n)?.let{it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)&&!it.hasTransport(NetworkCapabilities.TRANSPORT_VPN)}==true}
+        idleOffline=false
         if(!online&&!offline&&settings.connectionAlerts())VpnCoordinator.get(context).notifyCompact("Нет сети",true)
         if(online&&offline&&settings.connectionAlerts())VpnCoordinator.get(context).notifyCompact("Сеть восстановлена",true)
         offline=!online

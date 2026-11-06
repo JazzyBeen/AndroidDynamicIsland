@@ -71,6 +71,11 @@ class VpnCoordinator private constructor(private val context:Context){
             val unexpected=wasEmbeddedConnected&&!value.connected&&!value.busy&&!IslandVpnService.expectedStop
             if(value.connected){wasEmbeddedConnected=true;IslandSettings(context).expectedConnected(true)}else if(!value.busy){wasEmbeddedConnected=false;IslandSettings(context).expectedConnected(false)}
             if(unexpected){mutableState.value=VpnStatus(false,false,value.message);if(IslandSettings(context).connectionAlerts())notifyCompact("VPN отключился",false)}
+            // Nobody tapped for an automatic attempt: the app shows its progress, the island only the result.
+            else if(IslandVpnService.automatic){
+                mutableState.value=VpnStatus(value.connected,value.busy,value.message)
+                if(value.connected&&IslandSettings(context).connectionAlerts())notifyCompact("VPN подключён",true)
+            }
             else announce(value.message,!value.busy,value.connected)
         }
     }}

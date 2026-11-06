@@ -9,7 +9,7 @@ import io.github.jazzybeen.androiddynamicisland.system.*;
 
 /** Selected-client adapter. A native launch command is used only for the client that implements it. */
 public final class VpnClientBridge {
-    private static final String NATIVE_CONNECT_PACKAGE="org.interhive.sota.connect";
+    public static final String NATIVE_CONNECT_PACKAGE="org.interhive.sota.connect";
     private static final String CONNECT="org.interhive.kitten_vpn_engine.extra.CONNECT_ON_LAUNCH";
     private VpnClientBridge(){}
     public static String selectedPackage(Context context){IslandSettings settings=new IslandSettings(context);return settings.embeddedVpn()?context.getPackageName():settings.vpnPackage();}

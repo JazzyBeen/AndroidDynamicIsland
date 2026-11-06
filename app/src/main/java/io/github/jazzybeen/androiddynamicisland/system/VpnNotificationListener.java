@@ -20,6 +20,16 @@ public final class VpnNotificationListener extends NotificationListenerService {
     public static PendingIntent action(boolean connecting) { return connecting ? connect : disconnect; }
     public static void refreshSelection(){clientOngoing=false;disconnect=connect=null;if(instance!=null)instance.refresh();}
     public static boolean connected(){return instance!=null;}
+    /** Visible text of one app's current notifications, e.g. the server a VPN client says it is connected to. */
+    public static String textOf(String packageName){
+        VpnNotificationListener listener=instance;if(listener==null||packageName==null)return "";
+        StringBuilder text=new StringBuilder();
+        try{StatusBarNotification[] all=listener.getActiveNotifications();if(all!=null)for(StatusBarNotification sbn:all){
+            if(!packageName.equals(sbn.getPackageName()))continue;android.os.Bundle extras=sbn.getNotification().extras;
+            for(String key:new String[]{Notification.EXTRA_TITLE,Notification.EXTRA_TEXT,Notification.EXTRA_SUB_TEXT,Notification.EXTRA_BIG_TEXT}){CharSequence value=extras.getCharSequence(key);if(value!=null)text.append(value).append('\n');}
+        }}catch(RuntimeException ignored){}
+        return text.length()>2000?text.substring(0,2000):text.toString();
+    }
     public static void refreshActivities(){if(instance!=null){if(instance.media!=null)instance.media.publish();io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(instance,true);}}
     @Override public void onListenerConnected() { instance = this;notices=new io.github.jazzybeen.androiddynamicisland.activities.NoticeSource(this);if(media!=null)media.close();media=new io.github.jazzybeen.androiddynamicisland.activities.MediaSource(this);media.start(); refresh(); refreshActivities(); }
     @Override public void onListenerDisconnected() { instance = null; clientOngoing = false; disconnect = connect = null;if(media!=null){media.close();media=null;}io.github.jazzybeen.androiddynamicisland.activities.ActivityHub.INSTANCE.clearNotices();io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(this,false); }

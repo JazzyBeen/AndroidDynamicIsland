@@ -30,7 +30,7 @@ class MainActivity:ComponentActivity(){
         screen=AppUi.create(this,settings){handle(it)};setContentView(screen)
         // Only after setContentView: on Android 15 the insets controller needs the DecorView.
         applySystemBars()
-        if(!settings.introduced())main.postDelayed({if(!isFinishing){settings.introduced(true);AppDialogs.show(this,"Твой остров","Добавь встроенный VPN-профиль и разреши показ острова через специальные возможности.\n\nПрофиль хранится зашифрованным. Приложение не делает снимки экрана и не использует микрофон.","Настроить",{VpnSetupDialog.show(this){configuring=true;nextSetup()}},"Позже")}},350)
+        if(!settings.introduced())main.postDelayed({if(!isFinishing){settings.introduced(true);AppDialogs.show(this,"Твой остров","Добавь встроенный VPN-профиль и разреши показ острова через специальные возможности.\n\nПрофиль хранится зашифрованным. Приложение не делает снимки экрана и не использует микрофон.","Настроить",{AutoSetupDialog.show(this){configuring=true;nextSetup()}},"Позже")}},350)
     }
     override fun onResume(){
         super.onResume();if(!::settings.isInitialized)return
@@ -41,20 +41,24 @@ class MainActivity:ComponentActivity(){
     }
     private fun refresh(){screen?.let{AppUi.refresh(it)}}
     private fun nextSetup(){
-        if(!VpnClientBridge.installed(this)){VpnSetupDialog.show(this){refresh();nextSetup()};return}
+        if(!VpnClientBridge.installed(this)){AutoSetupDialog.show(this){refresh();nextSetup()};return}
         if(!Permissions.notifications(this)&&Build.VERSION.SDK_INT>=33){requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),41);return}
         if(!Permissions.accessibility(this)){
             AppDialogs.show(this,"Показ острова","Включи Dynamic Island в разделе специальных возможностей. Служба показывает остров и распознаёт меню питания. При необходимости она нажимает кнопку VPN только в выбранном клиенте.\n\nЕсли Android блокирует доступ: информация о приложении → ⋮ → «Разрешить ограниченные настройки».","Открыть настройки",{waitingForAccessibility=true;open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))})
             return
         }
         configuring=false;settings.enabled(true);IslandService.ensureStarted(this);refresh()
+        // Setup ends connected: the one-time VPN consent is asked here, later connections need no taps.
+        if(settings.embeddedVpn()&&settings.autoConnect()&&!IslandVpnService.status.connected&&!IslandVpnService.status.busy)authorizeVpn(true)
         AppDialogs.show(this,"Остров включён","Кнопка «Показать остров» проверяет отображение.\n\nВ разделе VPN проверь подключение и отключение. Для вызова без меню выключения можно назначить остров системным ассистентом в настройках приложения.","Показать остров",{VpnCoordinator.get(this).preview()},"Готово")
     }
     private fun handle(action:String){when(action){
         "setup"->{configuring=true;nextSetup()}
         "enabled"->{if(settings.enabled()){settings.enabled(false);stopService(Intent(this,IslandService::class.java));IslandAccessibilityService.current()?.hideIsland();refresh()}else{configuring=true;nextSetup()}}
         "pickClient"->{if(IslandVpnService.status.connected||IslandVpnService.status.busy)profileBusy()else ClientPicker.show(this){refresh()}}
-        "embeddedSetup"->{if(IslandVpnService.status.connected||IslandVpnService.status.busy)profileBusy()else VpnSetupDialog.show(this){refresh();authorizeVpn(false)}}
+        "embeddedSetup"->{if(IslandVpnService.status.connected||IslandVpnService.status.busy)profileBusy()else AutoSetupDialog.show(this){refresh();handle("toggleVpn")}}
+        "autoConnect"->refresh()
+        "alwaysOn"->AppDialogs.show(this,"Постоянный VPN","Android сам запустит VPN острова при включении телефона и будет держать его подключённым — даже если остров выключен.\n\nНастройки → VPN → ⚙ рядом с Dynamic Island → «Постоянная VPN». Если острова нет в списке, сначала подключись через него один раз.","Открыть настройки",{open(Intent(Settings.ACTION_VPN_SETTINGS))},"Позже")
         "forgetProfile"->{if(IslandVpnService.status.connected||IslandVpnService.status.busy)profileBusy()else AppDialogs.show(this,"Удалить профиль?","Ключ и конфигурация будут удалены с этого устройства.","Удалить",{VpnProfileStore(this).clear();settings.embeddedVpn(false);settings.vpnPackage("");VpnCoordinator.get(this).clientChanged();refresh()},"Отмена")}
         "toggleVpn"->{
             if(!VpnClientBridge.installed(this)||!Permissions.ready(this)){configuring=true;nextSetup()}

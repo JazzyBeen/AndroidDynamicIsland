@@ -110,7 +110,7 @@ private val tabs=listOf("Остров","VPN","События","Настройк�
                         Group{
                             Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically){VpnIcon(46,client);Spacer(Modifier.width(16.dp));Column(Modifier.weight(1f)){Label(VpnClientBridge.label(context),18,bold=true);Label(if(embedded)"Встроенный VPN · без открытия клиента" else if(client.isEmpty())"Добавь подключение" else "Внешний VPN-клиент",12,Secondary)}}
                             HorizontalDivider(Modifier.padding(start=20.dp),color=Divider)
-                            TextRow(if(embedded)"Изменить профиль" else "Настроить встроенный VPN",Blue){action.accept("embeddedSetup")}
+                            TextRow(if(embedded)"Изменить профиль" else "Подключить по ключу из клиента",Blue){action.accept("embeddedSetup")}
                             TextRow("Выбрать внешнее приложение",Secondary){action.accept("pickClient")}
                         }
                         Group{
@@ -123,6 +123,15 @@ private val tabs=listOf("Остров","VPN","События","Настройк�
                         PrimaryButton(if(status.busy)"Выполняется…" else if(status.connected)"Отключить VPN" else "Подключить VPN",enabled=!status.busy){action.accept("toggleVpn")}
                         if(!embedded)PrimaryButton("Открыть VPN-приложение",primary=false){action.accept("client")}
                         Caption(if(embedded)"Профиль хранится зашифрованным на этом устройстве. После первого разрешения VPN включается без открытия окон." else "Внешний клиент может открывать своё окно. Для полностью фонового подключения настрой встроенный VPN.")
+                        if(embedded){
+                            Section("АВТОМАТИЧЕСКИ"){
+                                var auto by remember(revision){mutableStateOf(settings.autoConnect())}
+                                SettingRow("Подключать сам","После включения телефона, обрыва и возврата сети"){AppSwitch(auto){auto=it;settings.autoConnect(it);action.accept("autoConnect")}}
+                                HorizontalDivider(Modifier.padding(start=16.dp),color=Divider)
+                                ActionRow("Постоянный VPN Android","Надёжнее всего"){action.accept("alwaysOn")}
+                            }
+                            Caption("Если отключить VPN вручную или подключить другое VPN-приложение, остров не станет переподключаться до следующего включения через него или перезагрузки.")
+                        }
                         if(embedded)PrimaryButton("Удалить сохранённый профиль",primary=false){action.accept("forgetProfile")}
                         Section("ДОСТУПЫ"){
                             ActionRow("Специальные возможности",if(IslandAccessibilityService.current()!=null)"Подключены" else "Нужно включить"){action.accept("accessibility")}
@@ -203,7 +212,7 @@ private val tabs=listOf("Остров","VPN","События","Настройк�
         ActionRow("Настроить заново",null){action.accept("setup")}
         ActionRow("Информация",null){action.accept("details")}
     }
-    Caption("Версия 0.4.0\nБез снимков экрана и микрофона. Интернет используется только для VPN.")
+    Caption("Версия 0.5.0\nБез снимков экрана и микрофона. Интернет используется только для VPN.")
 }
 
 @Composable fun Label(text:String,size:Int=15,color:Color=White,bold:Boolean=false,modifier:Modifier=Modifier){

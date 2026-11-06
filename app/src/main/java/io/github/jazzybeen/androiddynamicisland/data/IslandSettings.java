@@ -26,6 +26,12 @@ public final class IslandSettings {
     public void originY(int value) { prefs.edit().putInt("originY",Math.max(0,Math.min(100,value))).apply(); }
     public boolean expectedConnected() { return prefs.getBoolean("expectedConnected",false); }
     public void expectedConnected(boolean value) { prefs.edit().putBoolean("expectedConnected",value).apply(); }
+    /** Bring the embedded VPN up by itself: after boot, after a drop, when the network returns. */
+    public boolean autoConnect() { return prefs.getBoolean("autoConnect",true); }
+    public void autoConnect(boolean value) { prefs.edit().putBoolean("autoConnect",value).apply(); }
+    /** The user's last word on the tunnel: false after they switch it off or another VPN takes over. */
+    public boolean vpnWanted() { return prefs.getBoolean("vpnWanted",false); }
+    public void vpnWanted(boolean value) { prefs.edit().putBoolean("vpnWanted",value).apply(); }
     public boolean connectionAlerts() { return prefs.getBoolean("connectionAlerts",true); }
     public void connectionAlerts(boolean value) { prefs.edit().putBoolean("connectionAlerts",value).apply(); }
     public boolean idleAlerts() { return prefs.getBoolean("idleAlerts",true); }
@@ -53,6 +59,8 @@ public final class IslandSettings {
     public void material(boolean value) { prefs.edit().putBoolean("material", value).apply(); }
     public int accent() { return prefs.getInt("accent", 0); }
     public void accent(int value) { prefs.edit().putInt("accent", Math.max(0, Math.min(5, value))).apply(); }
+    public String providerHost() { return prefs.getString("providerHost", ""); }
+    public void providerHost(String value) { prefs.edit().putString("providerHost", value == null ? "" : value).apply(); }
     public int blur() { return prefs.getInt("blur", 32); }
     public void blur(int value) { prefs.edit().putInt("blur", Math.max(0, Math.min(48, value))).apply(); }
 }
