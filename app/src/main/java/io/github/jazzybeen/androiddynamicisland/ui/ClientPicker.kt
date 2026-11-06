@@ -25,11 +25,12 @@ import kotlinx.coroutines.withContext
 object ClientPicker{
     fun show(activity:Activity,onSelected:()->Unit){
         val dialog=ComponentDialog(activity)
-        dialog.setContentView(ComposeView(dialog.context).apply{setContent{
+        dialog.setContentView(ComposeView(dialog.context).apply{setContent{AppTheme{
+            val look=LocalLook.current
             var clients by remember{mutableStateOf<List<VpnClientBridge.Client>?>(null)}
             LaunchedEffect(Unit){clients=withContext(Dispatchers.IO){VpnClientBridge.discover(activity)}}
-            Column(Modifier.fillMaxWidth().padding(20.dp).background(Color(0xFF1C1C1E),RoundedCornerShape(28.dp)).padding(24.dp)){
-                Label("VPN-приложение",24,bold=true);Spacer(Modifier.height(8.dp));Label("Выбери установленный клиент",13,Color(0xFF98989F));Spacer(Modifier.height(20.dp))
+            Column(Modifier.fillMaxWidth().padding(20.dp).background(if(look.material)androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh else look.card,RoundedCornerShape(28.dp)).padding(24.dp)){
+                Label("VPN-приложение",24,bold=!look.material);Spacer(Modifier.height(8.dp));Label("Выбери установленный клиент",13,look.secondary);Spacer(Modifier.height(20.dp))
                 val available=clients
                 if(available==null)Label("Поиск…",14)
                 else if(available.isEmpty())Label("Сначала установи и настрой VPN-клиент.",14)
@@ -38,9 +39,9 @@ object ClientPicker{
                         IslandSettings(activity).apply{embeddedVpn(false);vpnPackage(client.packageName())};VpnCoordinator.get(activity).clientChanged();VpnNotificationListener.refreshSelection();IslandAccessibilityService.current()?.configureClient();dialog.dismiss();onSelected()
                     }.padding(vertical=16.dp),verticalAlignment=Alignment.CenterVertically){VpnIcon(38,client.packageName());Spacer(Modifier.width(14.dp));Label(client.label(),16)}
                 }}
-                Spacer(Modifier.height(12.dp));Box(Modifier.fillMaxWidth().height(44.dp).clickable{dialog.dismiss()},contentAlignment=Alignment.Center){Label("Отмена",14,Color(0xFF0A84FF))}
+                Spacer(Modifier.height(12.dp));Box(Modifier.fillMaxWidth().height(44.dp).clickable{dialog.dismiss()},contentAlignment=Alignment.Center){Label("Отмена",14,look.accent)}
             }
-        }})
+        }}})
         dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT));dialog.window?.setDimAmount(.75f);dialog.show();dialog.window?.setLayout(-1,-2)
     }
 }

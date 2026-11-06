@@ -9,10 +9,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- Approximate foreground location only, for the explicit route picker. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" tools:node="remove" />
     <queries><intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent><package android:name="com.miui.securitycenter" /></queries>
     <application android:theme="@style/AppTheme" android:label="Dynamic Island" android:icon="@drawable/ic_island" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
         <service android:name=".activities.BannerConditionService" android:exported="true" android:permission="android.permission.BIND_CONDITION_PROVIDER_SERVICE" android:label="Dynamic Island · без баннеров">
@@ -20,7 +16,6 @@
         </service>
         <activity android:name=".ui.MainActivity" android:exported="true" android:launchMode="singleTop">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
-            <intent-filter><action android:name="android.intent.action.SEND" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /></intent-filter>
         </activity>
         <activity android:name=".ui.ToggleActivity" android:exported="false" android:excludeFromRecents="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <service android:name=".system.IslandAssistantService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION" android:label="Dynamic Island">

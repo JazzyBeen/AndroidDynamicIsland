@@ -22,7 +22,7 @@ import androidx.lifecycle.*
 import androidx.savedstate.*
 import io.github.jazzybeen.androiddynamicisland.data.IslandSettings
 import io.github.jazzybeen.androiddynamicisland.ui.CountryFlag
-import io.github.jazzybeen.androiddynamicisland.ui.IslandFont
+import io.github.jazzybeen.androiddynamicisland.ui.CloseBadge
 
 /** Two content layouts share one animated silhouette; neither samples the screen behind it. */
 class IslandContent(context:Context,private val compact:Boolean):LifecycleOwner,SavedStateRegistryOwner,ViewModelStoreOwner{
@@ -40,32 +40,29 @@ class IslandContent(context:Context,private val compact:Boolean):LifecycleOwner,
     private var code by mutableStateOf("")
     private var response by mutableIntStateOf(-1)
     private var info by mutableStateOf("")
+    private var look by mutableStateOf(IslandLook.from(context))
     init{
         saved.performAttach();saved.performRestore(null);registry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         attachToRoot(view);view.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         view.setContent{
-            Box(Modifier.fillMaxSize().background(Color.Black,RoundedCornerShape(50))){
+            val look=look
+            Box(Modifier.fillMaxSize().background(look.fillColor,RoundedCornerShape(50))){
                 if(compact){
                     Row(Modifier.fillMaxSize().padding(start=7.dp,end=13.dp),verticalAlignment=Alignment.CenterVertically){
                         CountryFlag(code,26);Spacer(Modifier.weight(1f))
                         // Keep the middle clear for the physical camera, including multiword alerts.
-                        Text(info.ifBlank{if(connected&&response>0)"$response мс"else if(connected)"Вкл."else "Выкл."},modifier=Modifier.widthIn(max=76.dp),fontFamily=IslandFont,color=if(info.isNotBlank()&&!connected)Color(0xFFFF6961)else Color.White,fontSize=if(info.isBlank())15.sp else 12.sp,lineHeight=if(info.isBlank())20.sp else 14.sp,maxLines=if(info.isBlank())1 else 2,overflow=TextOverflow.Ellipsis)
+                        Text(info.ifBlank{if(connected&&response>0)"$response мс"else if(connected)"Вкл."else "Выкл."},modifier=Modifier.widthIn(max=76.dp),fontFamily=look.font,color=if(info.isNotBlank()&&!connected)look.negative else if(look.material&&connected&&info.isBlank())look.positive else look.text,fontSize=if(info.isBlank())15.sp else 12.sp,lineHeight=if(info.isBlank())20.sp else 14.sp,maxLines=if(info.isBlank())1 else 2,overflow=TextOverflow.Ellipsis)
                     }
                 }else{
                     Row(Modifier.fillMaxSize().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
                         CountryFlag(code,48);Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)){
-                            Text(country,fontFamily=IslandFont,color=Color(0xFF8E8E93),fontSize=13.sp,lineHeight=17.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Text(country,fontFamily=look.font,color=look.secondary,fontSize=13.sp,lineHeight=17.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                             Spacer(Modifier.height(4.dp))
-                            Text(if(complete&&connected)city else message,fontFamily=IslandFont,fontWeight=FontWeight.SemiBold,color=Color.White,fontSize=19.sp,lineHeight=23.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Text(if(complete&&connected)city else message,fontFamily=look.font,fontWeight=if(look.material)FontWeight.Medium else FontWeight.SemiBold,color=look.text,fontSize=19.sp,lineHeight=23.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.width(10.dp))
-                        Canvas(Modifier.size(48.dp)){
-                            drawCircle(Color(0xFFFF3B30))
-                            val inset=size.width*.34f
-                            drawLine(Color.White,Offset(inset,inset),Offset(size.width-inset,size.height-inset),2.dp.toPx(),StrokeCap.Round)
-                            drawLine(Color.White,Offset(size.width-inset,inset),Offset(inset,size.height-inset),2.dp.toPx(),StrokeCap.Round)
-                        }
+                        CloseBadge(look,48)
                     }
                 }
             }
@@ -73,7 +70,7 @@ class IslandContent(context:Context,private val compact:Boolean):LifecycleOwner,
         registry.handleLifecycleEvent(Lifecycle.Event.ON_START);registry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
     @JvmOverloads fun update(text:String,complete:Boolean,connected:Boolean,notice:String=""){
-        this.message=text;this.complete=complete;this.connected=connected
+        this.message=text;this.complete=complete;this.connected=connected;look=IslandLook.from(view.context)
         info=notice
         val settings=IslandSettings(view.context);country=settings.vpnCountry();city=settings.vpnCity();code=settings.vpnCountryCode();response=settings.responseTime()
     }

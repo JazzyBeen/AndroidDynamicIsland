@@ -14,7 +14,7 @@ public final class IslandService extends Service {
     private ConnectivityManager connectivity;
     private VpnWatchdog watchdog;
     private final Handler heartbeatHandler=new Handler(Looper.getMainLooper());
-    private final Runnable heartbeat=new Runnable(){public void run(){io.github.jazzybeen.androiddynamicisland.navigation.NavigationHub.INSTANCE.heartbeat();io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(IslandService.this,VpnNotificationListener.connected());heartbeatHandler.postDelayed(this,5000);}};
+    private final Runnable heartbeat=new Runnable(){public void run(){io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(IslandService.this,VpnNotificationListener.connected());heartbeatHandler.postDelayed(this,5000);}};
     private final ConnectivityManager.NetworkCallback callback = new ConnectivityManager.NetworkCallback() {
         @Override public void onAvailable(Network network) { changed(); }
         @Override public void onLost(Network network) { changed(); }

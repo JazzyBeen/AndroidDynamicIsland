@@ -17,7 +17,6 @@ class NoticeSource(private val context:Context){
         if(!context.getSystemService(PowerManager::class.java).isInteractive||context.getSystemService(KeyguardManager::class.java).isKeyguardLocked)return
         if(n.flags and Notification.FLAG_GROUP_SUMMARY!=0||sbn.isOngoing||n.category in setOf(Notification.CATEGORY_TRANSPORT,Notification.CATEGORY_CALL,Notification.CATEGORY_ALARM,Notification.CATEGORY_SERVICE,Notification.CATEGORY_NAVIGATION))return
         if(n.extras.containsKey(Notification.EXTRA_MEDIA_SESSION))return
-        if(pkg in setOf("ru.yandex.yandexmaps","ru.yandex.yandexnavi"))return
         val extras=n.extras
         var title=extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         var text=(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?:extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()

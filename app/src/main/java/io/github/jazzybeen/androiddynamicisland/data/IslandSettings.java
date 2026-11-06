@@ -49,6 +49,10 @@ public final class IslandSettings {
     public void powerShortcut(boolean value) { prefs.edit().putBoolean("powerShortcut", value).apply(); }
     public int verticalOffset() { return prefs.getInt("verticalOffset", 0); }
     public void verticalOffset(int value) { prefs.edit().putInt("verticalOffset", Math.max(-12, Math.min(64, value))).apply(); }
+    public boolean material() { return prefs.getBoolean("material", false); }
+    public void material(boolean value) { prefs.edit().putBoolean("material", value).apply(); }
+    public int accent() { return prefs.getInt("accent", 0); }
+    public void accent(int value) { prefs.edit().putInt("accent", Math.max(0, Math.min(5, value))).apply(); }
     public int blur() { return prefs.getInt("blur", 32); }
     public void blur(int value) { prefs.edit().putInt("blur", Math.max(0, Math.min(48, value))).apply(); }
 }

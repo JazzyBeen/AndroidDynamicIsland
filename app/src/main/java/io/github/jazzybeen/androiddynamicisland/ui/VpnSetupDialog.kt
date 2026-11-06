@@ -28,14 +28,15 @@ object VpnSetupDialog{
         val dialog=ComponentDialog(activity)
         dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         dialog.setContentView(ComposeView(dialog.context).apply{setContent{
-            MaterialTheme(colorScheme=darkColorScheme(primary=Color.White,surface=Color(0xFF1C1C1E))){
+            AppTheme{
+                val look=LocalLook.current
                 var api by remember{mutableStateOf(true)}
                 var host by remember{mutableStateOf("")};var key by remember{mutableStateOf("")};var config by remember{mutableStateOf("")}
                 var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf("")}
                 val scope=rememberCoroutineScope()
-                Column(Modifier.fillMaxWidth().padding(16.dp).background(Color(0xFF1C1C1E),RoundedCornerShape(28.dp)).padding(22.dp).verticalScroll(rememberScrollState()).imePadding()){
-                    Label("Встроенный VPN",24,bold=true);Spacer(Modifier.height(10.dp))
-                    Label("Подключение внутри острова — без запуска другого приложения.",13,Color(0xFF98989F));Spacer(Modifier.height(16.dp))
+                Column(Modifier.fillMaxWidth().padding(16.dp).background(if(look.material)MaterialTheme.colorScheme.surfaceContainerHigh else look.card,RoundedCornerShape(28.dp)).padding(22.dp).verticalScroll(rememberScrollState()).imePadding()){
+                    Label("Встроенный VPN",24,bold=!look.material);Spacer(Modifier.height(10.dp))
+                    Label("Подключение внутри острова — без запуска другого приложения.",13,look.secondary);Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         FilterChip(api,{if(!busy)api=true},label={Label("По ключу",13)})
                         FilterChip(!api,{if(!busy)api=false},label={Label("Конфигурация",13)})
@@ -45,13 +46,13 @@ object VpnSetupDialog{
                         OutlinedTextField(host,{host=it},label={Text("HTTPS-адрес API")},placeholder={Text("https://api.example.com")},singleLine=true,enabled=!busy,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri),modifier=Modifier.fillMaxWidth())
                         Spacer(Modifier.height(10.dp))
                         OutlinedTextField(key,{key=it},label={Text("Ключ доступа")},singleLine=true,enabled=!busy,visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password),modifier=Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(12.dp));Label("Для провайдеров с API connection/list и connection/connect. Ключ передаётся только указанному серверу по HTTPS.",11,Color(0xFF98989F))
+                        Spacer(Modifier.height(12.dp));Label("Для провайдеров с API connection/list и connection/connect. Ключ передаётся только указанному серверу по HTTPS.",11,look.secondary)
                     }else{
                         OutlinedTextField(config,{config=it},label={Text("Ссылка VLESS или sing-box JSON")},minLines=3,maxLines=5,enabled=!busy,modifier=Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(12.dp));Label("Нужна конфигурация одного сервера. Правила, внешние файлы и API управления из исходного файла не импортируются.",11,Color(0xFF98989F))
+                        Spacer(Modifier.height(12.dp));Label("Нужна конфигурация одного сервера. Правила, внешние файлы и API управления из исходного файла не импортируются.",11,look.secondary)
                     }
-                    Spacer(Modifier.height(12.dp));Label("Профиль шифруется ключом Android Keystore и не попадает в резервные копии. Android разрешает один активный VPN.",11,Color(0xFF98989F))
-                    if(error.isNotBlank()){Spacer(Modifier.height(12.dp));Label(error,12,Color(0xFFFF6961))}
+                    Spacer(Modifier.height(12.dp));Label("Профиль шифруется ключом Android Keystore и не попадает в резервные копии. Android разрешает один активный VPN.",11,look.secondary)
+                    if(error.isNotBlank()){Spacer(Modifier.height(12.dp));Label(error,12,look.danger)}
                     Spacer(Modifier.height(18.dp))
                     PrimaryButton(if(busy)"Проверка…" else "Сохранить профиль",enabled=!busy){
                         busy=true;error=""

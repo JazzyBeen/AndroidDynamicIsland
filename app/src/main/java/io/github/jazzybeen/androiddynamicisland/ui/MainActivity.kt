@@ -16,8 +16,7 @@ import io.github.jazzybeen.androiddynamicisland.system.*
 import io.github.jazzybeen.androiddynamicisland.vpn.*
 import io.github.jazzybeen.androiddynamicisland.vpn.embedded.IslandVpnService
 import io.github.jazzybeen.androiddynamicisland.data.VpnProfileStore
-import io.github.jazzybeen.androiddynamicisland.navigation.NavigationHub
-import io.github.jazzybeen.androiddynamicisland.navigation.RouteLink
+import androidx.compose.ui.graphics.toArgb
 
 class MainActivity:ComponentActivity(){
     private lateinit var settings:IslandSettings
@@ -27,17 +26,9 @@ class MainActivity:ComponentActivity(){
     private val main=Handler(Looper.getMainLooper())
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState);settings=IslandSettings(this)
-        window.setDecorFitsSystemWindows(false);window.statusBarColor=Color.BLACK;window.navigationBarColor=Color.BLACK
+        window.setDecorFitsSystemWindows(false);applySystemBars()
         screen=AppUi.create(this,settings){handle(it)};setContentView(screen)
-        handleSharedRoute(intent)
         if(!settings.introduced())main.postDelayed({if(!isFinishing){settings.introduced(true);AppDialogs.show(this,"Твой остров","Добавь встроенный VPN-профиль и разреши показ острова через специальные возможности.\n\nПрофиль хранится зашифрованным. Приложение не делает снимки экрана и не использует микрофон.","Настроить",{VpnSetupDialog.show(this){configuring=true;nextSetup()}},"Позже")}},350)
-    }
-    override fun onNewIntent(intent:Intent){super.onNewIntent(intent);setIntent(intent);handleSharedRoute(intent)}
-    private fun handleSharedRoute(intent:Intent){
-        if(intent.action!=Intent.ACTION_SEND||intent.type!="text/plain")return
-        val text=intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty().take(12000)
-        try{NavigationHub.setRoute(RouteLink.parse(text));AppDialogs.show(this,"Маршрут получен","Предпросмотр появится по нажатию на маленький остров. Для карты добавь бесплатный ключ MapKit в разделе «Навигация». Активные указания берутся из уведомлений Карт.","Понятно",{})}
-        catch(_:Exception){AppDialogs.show(this,"Нужна полная ссылка","В ссылке должны быть координаты начала и конца маршрута. Короткую ссылку открой в браузере и скопируй полный адрес. Затем вставь его в разделе «Навигация».","Понятно",{})}
     }
     override fun onResume(){
         super.onResume();if(!::settings.isInitialized)return
@@ -69,26 +60,19 @@ class MainActivity:ComponentActivity(){
             else{settings.enabled(true);IslandService.ensureStarted(this);refresh();if(settings.embeddedVpn())authorizeVpn(true)else VpnCoordinator.get(this).toggle()}
         }
         "preview"->{if(IslandAccessibilityService.current()!=null)VpnCoordinator.get(this).preview()else showAccessibilityHelp()}
-        "navEnabled"->{VpnNotificationListener.refreshNavigation();refresh();if(NavigationHub.enabled(this)&&!Permissions.listener(this))handle("listener")}
-        "navPlanner"->{NavigationHub.plan();if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),81)}
         "bannerPermission"->open(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-        "mapKeyHelp"->open(Intent(Intent.ACTION_VIEW,Uri.parse("https://yandex.ru/maps-api/docs/mapkit/android/generated/getting_started.html")))
-        "navBothPreview"->{NavigationHub.preview();main.postDelayed({VpnCoordinator.get(this).notifyCompact("Проверка оформления",IslandVpnService.status.connected)},850)}
-        "navClearDemo"->{NavigationHub.clear();VpnNotificationListener.refreshNavigation()}
         "originGuide"->{IslandAccessibilityService.current()?.showOriginGuide()}
         "eventPreview"->{VpnCoordinator.get(this).notifyCompact("Тестовое оповещение",IslandVpnService.status.connected)}
         "originPreview"->{if(IslandAccessibilityService.current()!=null){IslandAccessibilityService.current()?.hideIsland();VpnCoordinator.get(this).preview()}else showAccessibilityHelp()}
         "client"->{try{VpnClientBridge.open(this,false)}catch(_:RuntimeException){ClientPicker.show(this){refresh()}}}
         "accessibility"->showAccessibilityHelp()
-        "listener"->AppDialogs.show(this,"Уведомления для острова","Доступ нужен для выбранных уведомлений, медиаплеера и подсказок Карт. Приложение не хранит историю сообщений и не отправляет их на сервер. Выбор источников — в разделе «События».","Открыть настройки",{open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))})
+        "listener"->AppDialogs.show(this,"Уведомления для острова","Доступ нужен для выбранных уведомлений и медиаплеера. Приложение не хранит историю сообщений и не отправляет их на сервер. Выбор источников — в разделе «События».","Открыть настройки",{open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))})
         "notifications"->{if(Build.VERSION.SDK_INT>=33)requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),42)}
         "battery"->AppDialogs.show(this,"Работа в фоне","Разреши работу без оптимизации батареи для острова и своего VPN-клиента.","Разрешить",{open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,Uri.parse("package:$packageName")))})
         "autostart"->{try{startActivity(Intent().setComponent(ComponentName("com.miui.securitycenter","com.miui.permcenter.autostart.AutoStartManagementActivity")))}catch(_:RuntimeException){open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))}}
         "details"->open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
-        "assistant"->{
-            if(AssistantController.isSelected(this))assistantHint()
-            else AppDialogs.show(this,"Вместо меню выключения","Назначь Dynamic Island системным цифровым ассистентом. Тогда удержание питания, настроенное на вызов ассистента, будет переключать VPN через остров.\n\nПриложение заменит текущего ассистента. Голос, микрофон и содержимое экрана не используются.","Выбрать ассистента",{try{AssistantController.request(this)}catch(_:RuntimeException){open(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))}})
-        }
+        "assistant"->assistantGuide()
+        "theme"->{applySystemBars();refresh()}
         "tile"->{if(Build.VERSION.SDK_INT>=33)getSystemService(StatusBarManager::class.java).requestAddTileService(ComponentName(this,IslandTileService::class.java),"VPN · Island",Icon.createWithResource(this,R.drawable.ic_island),mainExecutor){}else AppDialogs.show(this,"Плитка VPN","Открой редактор шторки и добавь VPN · Island.","Понятно",{})}
     }}
     private fun profileBusy(){AppDialogs.show(this,"VPN работает","Сначала отключи VPN, затем измени профиль.","Понятно",{})}
@@ -98,9 +82,40 @@ class MainActivity:ComponentActivity(){
     }
     private var connectAfterPermission=false
     private fun showAccessibilityHelp(){AppDialogs.show(this,"Специальные возможности","Открой Dynamic Island и включи службу. Если она уже включена, но остров не появляется, выключи и снова включи её.\n\nДругие настройки специальных возможностей менять не нужно.","Открыть настройки",{open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))})}
-    private fun assistantHint(){AppDialogs.show(this,"Удержание питания","В настройках телефона открой «Запуск цифрового ассистента» или настройки жестов кнопки питания. Включи вызов ассистента удержанием питания.\n\nЕсли есть переключатель «Удерживать кнопку питания 0,5 с», он должен быть включён.","Открыть настройки",{open(Intent(Settings.ACTION_SETTINGS))},"Понятно")}
+    /** System bars follow the chosen style: black for the classic look, tonal surfaces for Material 3. */
+    private fun applySystemBars(){
+        val material=settings.material()
+        val dark=resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK==android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val scheme=Palette.scheme(settings.accent(),dark)
+        val top=if(material)scheme.surface.toArgb() else Color.BLACK
+        val bottom=if(material)scheme.surfaceContainer.toArgb() else Color.BLACK
+        window.statusBarColor=top;window.navigationBarColor=bottom;window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(top))
+        val light=material&&!dark
+        window.insetsController?.setSystemBarsAppearance(if(light)android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS else 0,android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+    }
+    private val xiaomi get()=Build.MANUFACTURER.equals("Xiaomi",true)||Build.BRAND.lowercase() in setOf("xiaomi","redmi","poco")
+    /** Short device-specific steps: which screen assigns the assistant and which one binds it to the power key. */
+    private fun assistantGuide(){
+        val selected=AssistantController.isSelected(this)
+        val assistant=when{
+            xiaomi->"Настройки → Приложения → Приложения по умолчанию → «Цифровой помощник» (в MIUI: «Помощник и голосовой ввод») → Dynamic Island."
+            Build.VERSION.SDK_INT>=31->"Настройки → Приложения → Приложения по умолчанию → Цифровой помощник → Приложение цифрового помощника → Dynamic Island."
+            else->"Настройки → Приложения → Приложения по умолчанию → Помощник и голосовой ввод → Dynamic Island."
+        }
+        val power=when{
+            xiaomi->"Настройки → Дополнительные настройки → «Быстрые жесты» или «Функции кнопок» → «Запуск Google Ассистента» / «Цифровой помощник» → «Удержание кнопки питания 0,5 с»."
+            Build.VERSION.SDK_INT>=31->"Настройки → Система → Жесты → Нажатие и удерживание кнопки питания → Цифровой помощник."
+            else->"На Android 11 удержание питания открывает меню выключения. Остров распознаёт его сам — отдельно ничего включать не нужно."
+        }
+        val first=if(selected)"1. Ассистент — готово ✓" else "1. Сделай остров ассистентом\n$assistant"
+        val message="$first\n\n2. Включи удержание питания\n$power\n\nНазвания пунктов могут немного отличаться в разных версиях${if(xiaomi)" HyperOS и MIUI" else " Android"}. Голос и микрофон не используются."
+        AppDialogs.show(this,if(xiaomi)"Кнопка питания на Xiaomi" else "Кнопка питания",message,if(selected)"Открыть настройки" else "Выбрать ассистента",{
+            if(selected)open(Intent(Settings.ACTION_SETTINGS))
+            else try{AssistantController.request(this)}catch(_:RuntimeException){open(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))}
+        },"Понятно")
+    }
     private fun open(intent:Intent){try{startActivity(intent)}catch(_:ActivityNotFoundException){AppDialogs.show(this,"Открой настройки телефона","Этот раздел недоступен по прямой ссылке.","Понятно",{})}}
     override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<String>,grantResults:IntArray){super.onRequestPermissionsResult(requestCode,permissions,grantResults);refresh();if(requestCode==41&&configuring&&Permissions.notifications(this))nextSetup()}
-    @Deprecated("Activity result bridge") override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(requestCode==72&&AssistantController.isSelected(this)){refresh();main.postDelayed({assistantHint()},250)};if(requestCode==73){if(resultCode==RESULT_OK&&connectAfterPermission)VpnCoordinator.get(this).toggle();connectAfterPermission=false;refresh()}}
+    @Deprecated("Activity result bridge") override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(requestCode==72&&AssistantController.isSelected(this)){refresh();main.postDelayed({assistantGuide()},250)};if(requestCode==73){if(resultCode==RESULT_OK&&connectAfterPermission)VpnCoordinator.get(this).toggle();connectAfterPermission=false;refresh()}}
     override fun onDestroy(){main.removeCallbacksAndMessages(null);super.onDestroy()}
 }
