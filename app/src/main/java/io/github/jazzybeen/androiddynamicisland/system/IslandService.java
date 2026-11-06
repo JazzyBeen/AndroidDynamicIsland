@@ -13,6 +13,8 @@ public final class IslandService extends Service {
     public static final String STOP = "io.github.jazzybeen.androiddynamicisland.STOP";
     private ConnectivityManager connectivity;
     private VpnWatchdog watchdog;
+    private final Handler heartbeatHandler=new Handler(Looper.getMainLooper());
+    private final Runnable heartbeat=new Runnable(){public void run(){io.github.jazzybeen.androiddynamicisland.navigation.NavigationHub.INSTANCE.heartbeat();io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(IslandService.this,VpnNotificationListener.connected());heartbeatHandler.postDelayed(this,5000);}};
     private final ConnectivityManager.NetworkCallback callback = new ConnectivityManager.NetworkCallback() {
         @Override public void onAvailable(Network network) { changed(); }
         @Override public void onLost(Network network) { changed(); }
@@ -40,6 +42,7 @@ public final class IslandService extends Service {
         connectivity = getSystemService(ConnectivityManager.class);
         connectivity.registerNetworkCallback(new NetworkRequest.Builder().clearCapabilities().build(), callback);
         watchdog=new VpnWatchdog(this);watchdog.start();
+        heartbeatHandler.post(heartbeat);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && STOP.equals(intent.getAction())) {
@@ -51,6 +54,6 @@ public final class IslandService extends Service {
         if (!new IslandSettings(this).enabled()) { stopSelf(); return START_NOT_STICKY; }
         return START_STICKY;
     }
-    @Override public void onDestroy() { if(watchdog!=null)watchdog.close();if (connectivity != null) connectivity.unregisterNetworkCallback(callback); super.onDestroy(); }
+    @Override public void onDestroy() { io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(this,false);heartbeatHandler.removeCallbacksAndMessages(null);if(watchdog!=null)watchdog.close();if (connectivity != null) connectivity.unregisterNetworkCallback(callback); super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }
 }

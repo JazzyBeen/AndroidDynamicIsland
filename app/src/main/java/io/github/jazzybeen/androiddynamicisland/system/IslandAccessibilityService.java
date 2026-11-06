@@ -22,11 +22,12 @@ public final class IslandAccessibilityService extends AccessibilityService {
     private boolean clickedDisconnect;
     private boolean connectingClient;
     public void configureClient(){cancelClientAction();android.accessibilityservice.AccessibilityServiceInfo info=getServiceInfo();info.packageNames=new String[]{"com.android.systemui","com.miui.systemui","com.miui.globalpower","miui.systemui.plugin",VpnClientBridge.selectedPackage(this)};setServiceInfo(info);}
-    private final BroadcastReceiver screen = new BroadcastReceiver() { @Override public void onReceive(Context context, Intent intent) { if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) hideIsland(); } };
+    private final BroadcastReceiver screen = new BroadcastReceiver() { @Override public void onReceive(Context context, Intent intent) { if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {hideIsland();io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(context,false);}else if(Intent.ACTION_USER_PRESENT.equals(intent.getAction())&&overlay!=null){overlay.resumeNavigation();VpnNotificationListener.refreshActivities();} } };
     public static IslandAccessibilityService current() { return instance; }
     @Override protected void onServiceConnected() {
         instance = this; configureClient(); if(overlay!=null)overlay.close();overlay = new IslandOverlay(this);
         IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        filter.addAction(Intent.ACTION_USER_PRESENT);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screen, filter, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(screen, filter);
         IslandService.ensureStarted(this);
@@ -140,5 +141,5 @@ public final class IslandAccessibilityService extends AccessibilityService {
     public void showIsland(String title, String text, boolean complete, boolean connected) { main.post(() -> { if (overlay != null) overlay.show(title, text, complete, connected); }); }
     public void hideIsland() { if (overlay != null) overlay.hide(); }
     @Override public void onInterrupt() { hideIsland(); }
-    @Override public void onDestroy() { instance = null; main.removeCallbacksAndMessages(null); try { unregisterReceiver(screen); } catch (IllegalArgumentException ignored) {} if (overlay != null) overlay.close(); super.onDestroy(); }
+    @Override public void onDestroy() { instance = null;io.github.jazzybeen.androiddynamicisland.activities.BannerPolicy.INSTANCE.update(this,false); main.removeCallbacksAndMessages(null); try { unregisterReceiver(screen); } catch (IllegalArgumentException ignored) {} if (overlay != null) overlay.close(); super.onDestroy(); }
 }

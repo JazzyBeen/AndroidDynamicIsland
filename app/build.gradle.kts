@@ -9,10 +9,10 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "io.github.jazzybeen.androiddynamicisland"
-        minSdk = 31
+        minSdk = 30
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.3.0"
     }
     if (signing.isNotEmpty()) signingConfigs.create("localRelease") {
         storeFile = rootProject.file(signing.getProperty("storeFile"))
@@ -38,6 +38,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:1.9.5")
     implementation("androidx.compose.ui:ui:1.9.5")
     implementation("androidx.compose.material3:material3:1.4.0")
+    implementation("com.yandex.android:maps.mobile:4.45.0-full")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
 }

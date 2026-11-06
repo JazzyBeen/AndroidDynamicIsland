@@ -66,7 +66,7 @@ object AppUi {
         Column(Modifier.background(Color.Black).navigationBarsPadding()){
             HorizontalDivider(color=Color.White.copy(alpha=.1f),thickness=.5.dp)
             Row(Modifier.fillMaxWidth().height(65.dp)){
-                listOf("Остров","VPN","Настройки").forEachIndexed{index,label->
+                listOf("Остров","VPN","Карты","События","Настройки").forEachIndexed{index,label->
                     Column(Modifier.weight(1f).fillMaxHeight().clickable{tab=index}.padding(top=10.dp),horizontalAlignment=Alignment.CenterHorizontally){
                         AppGlyph(index,if(tab==index)Blue else Secondary)
                         Spacer(Modifier.height(4.dp));Label(label,10,if(tab==index)Blue else Secondary)
@@ -123,6 +123,8 @@ object AppUi {
                             if(!embedded)ActionRow("Уведомления VPN",if(Permissions.listener(context))"Разрешены" else "Настроить"){action.accept("listener")}
                         }
                     }
+                    2->NavigationPage(action,revision)
+                    3->ActivitiesPage(action,revision)
                     else->{
                         PageHeader("Настройки","Всё на своём месте")
                         Section("УПРАВЛЕНИЕ"){
@@ -167,7 +169,7 @@ object AppUi {
                             ActionRow("Настроить заново",null){action.accept("setup")}
                             ActionRow("Информация",null){action.accept("details")}
                         }
-                        Caption("Версия 0.2.1\nБез снимков экрана и микрофона. Интернет используется для VPN и получения профиля.")
+                        Caption("Версия 0.3.0\nБез снимков экрана и микрофона. Интернет используется для VPN и карты, когда она открыта.")
                     }
                 }
             }
@@ -178,18 +180,18 @@ object AppUi {
 @Composable fun Label(text:String,size:Int=15,color:Color=White,bold:Boolean=false,modifier:Modifier=Modifier){
     Text(text,modifier,color,fontFamily=IslandFont,fontSize=size.sp,lineHeight=(size*1.35).sp,fontWeight=if(bold)FontWeight.Bold else FontWeight.Normal)
 }
-@Composable private fun PageHeader(title:String,subtitle:String){Column{Label(title,32,bold=true);Spacer(Modifier.height(8.dp));Label(subtitle,14,Secondary)}}
-@Composable private fun Caption(text:String){Label(text,12,Secondary,modifier=Modifier.padding(horizontal=3.dp))}
+@Composable internal fun PageHeader(title:String,subtitle:String){Column{Label(title,32,bold=true);Spacer(Modifier.height(8.dp));Label(subtitle,14,Secondary)}}
+@Composable internal fun Caption(text:String){Label(text,12,Secondary,modifier=Modifier.padding(horizontal=3.dp))}
 @Composable fun Group(content:@Composable ColumnScope.()->Unit){Column(Modifier.fillMaxWidth().background(Card,RoundedCornerShape(20.dp)),content=content)}
-@Composable private fun Section(title:String,content:@Composable ColumnScope.()->Unit){Column{Label(title,11,Secondary,modifier=Modifier.padding(start=14.dp,bottom=9.dp));Group(content)}}
-@Composable private fun SettingRow(title:String,detail:String?,icon:Int?=null,content:@Composable ()->Unit){
+@Composable internal fun Section(title:String,content:@Composable ColumnScope.()->Unit){Column{Label(title,11,Secondary,modifier=Modifier.padding(start=14.dp,bottom=9.dp));Group(content)}}
+@Composable internal fun SettingRow(title:String,detail:String?,icon:Int?=null,content:@Composable ()->Unit){
     Row(Modifier.fillMaxWidth().heightIn(min=66.dp).padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
         if(icon!=null){AppGlyph(icon,White);Spacer(Modifier.width(12.dp))}
         Column(Modifier.weight(1f)){Label(title,15);if(detail!=null){Spacer(Modifier.height(3.dp));Label(detail,12,Secondary)}};content()
     }
 }
 @Composable private fun TextRow(title:String,color:Color=White,action:()->Unit){Row(Modifier.fillMaxWidth().clickable(onClick=action).padding(18.dp),verticalAlignment=Alignment.CenterVertically){Label(title,15,color,modifier=Modifier.weight(1f));Label("›",23,Secondary)}}
-@Composable private fun ActionRow(title:String,detail:String?,action:()->Unit){Row(Modifier.fillMaxWidth().clickable(onClick=action).heightIn(min=57.dp).padding(horizontal=16.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically){Label(title,14,modifier=Modifier.weight(1f));if(detail!=null)Label(detail,11,Secondary,modifier=Modifier.padding(start=8.dp,end=8.dp));Label("›",20,Secondary)}}
+@Composable internal fun ActionRow(title:String,detail:String?,action:()->Unit){Row(Modifier.fillMaxWidth().clickable(onClick=action).heightIn(min=57.dp).padding(horizontal=16.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically){Label(title,14,modifier=Modifier.weight(1f));if(detail!=null)Label(detail,11,Secondary,modifier=Modifier.padding(start=8.dp,end=8.dp));Label("›",20,Secondary)}}
 @Composable fun PrimaryButton(text:String,primary:Boolean=true,enabled:Boolean=true,action:()->Unit){
     val interactions=remember{MutableInteractionSource()};val pressed by interactions.collectIsPressedAsState()
     val scale by animateFloatAsState(if(pressed).98f else 1f,spring(stiffness=650f),label="press")
@@ -211,7 +213,8 @@ object AppUi {
 @Composable fun IslandPreview(modifier:Modifier=Modifier,client:String?=null,connected:Boolean=false){
     val context=LocalContext.current;val settings=remember{IslandSettings(context)}
     val insets=(context as? Activity)?.window?.decorView?.rootWindowInsets;val density=context.resources.displayMetrics.density
-    val radius=IslandShape.radius((insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius?:0)/density,(insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)?.radius?:0)/density,settings.autoCorners(),settings.corners().toFloat())
+    val s31=android.os.Build.VERSION.SDK_INT>=31
+    val radius=IslandShape.radius((if(s31)insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius?:0 else 0)/density,(if(s31)insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)?.radius?:0 else 0)/density,settings.autoCorners(),settings.corners().toFloat())
     Box(modifier.background(Color.Black,RoundedCornerShape(radius.dp))){
         Row(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically){
             CountryFlag(settings.vpnCountryCode(),46);Spacer(Modifier.width(12.dp))
@@ -225,6 +228,7 @@ object AppUi {
     when(kind){
         0->drawRoundRect(color,Offset(size.width*.08f,size.height*.28f),androidx.compose.ui.geometry.Size(size.width*.84f,size.height*.44f),CornerRadius(size.height*.22f),style=stroke)
         1->{val p=Path().apply{moveTo(size.width*.5f,size.height*.08f);lineTo(size.width*.83f,size.height*.22f);lineTo(size.width*.8f,size.height*.57f);quadraticTo(size.width*.75f,size.height*.78f,size.width*.5f,size.height*.92f);quadraticTo(size.width*.25f,size.height*.78f,size.width*.2f,size.height*.57f);lineTo(size.width*.17f,size.height*.22f);close()};drawPath(p,color,style=stroke)}
+        2->{val p=Path().apply{moveTo(size.width*.15f,size.height*.48f);lineTo(size.width*.85f,size.height*.12f);lineTo(size.width*.53f,size.height*.87f);lineTo(size.width*.45f,size.height*.55f);close()};drawPath(p,color,style=stroke)}
         else->{for(i in 0..2){val y=size.height*(.22f+i*.28f);drawLine(color,Offset(size.width*.12f,y),Offset(size.width*.88f,y),1.8.dp.toPx(),StrokeCap.Round);drawCircle(Card,3.4.dp.toPx(),Offset(size.width*(if(i==1).35f else .65f),y));drawCircle(color,3.4.dp.toPx(),Offset(size.width*(if(i==1).35f else .65f),y),style=stroke)}}
     }
 }}
