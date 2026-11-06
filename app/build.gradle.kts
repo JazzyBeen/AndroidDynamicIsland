@@ -9,10 +9,16 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "io.github.jazzybeen.androiddynamicisland"
-        minSdk = 30
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.4.0"
+        versionName = "0.4.1"
+    }
+    // One codebase, two APKs. "modern" keeps the Android 12+ baseline that the VPN core
+    // (libbox, minSdk 31) was built for; "legacy" forces that core onto Android 11 devices.
+    // Modern has the higher versionCode so it can replace a legacy install after an OS upgrade.
+    flavorDimensions += "os"
+    productFlavors {
+        create("modern") { dimension = "os"; minSdk = 31; versionCode = 7; manifestPlaceholders["libboxOverride"] = "" }
+        create("legacy") { dimension = "os"; minSdk = 30; versionCode = 6; versionNameSuffix = "-android11"; manifestPlaceholders["libboxOverride"] = "go.libbox.gojni" }
     }
     if (signing.isNotEmpty()) signingConfigs.create("localRelease") {
         storeFile = rootProject.file(signing.getProperty("storeFile"))

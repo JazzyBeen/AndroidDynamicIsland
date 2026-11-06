@@ -26,8 +26,10 @@ class MainActivity:ComponentActivity(){
     private val main=Handler(Looper.getMainLooper())
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState);settings=IslandSettings(this)
-        window.setDecorFitsSystemWindows(false);applySystemBars()
+        window.setDecorFitsSystemWindows(false)
         screen=AppUi.create(this,settings){handle(it)};setContentView(screen)
+        // Only after setContentView: on Android 15 the insets controller needs the DecorView.
+        applySystemBars()
         if(!settings.introduced())main.postDelayed({if(!isFinishing){settings.introduced(true);AppDialogs.show(this,"Твой остров","Добавь встроенный VPN-профиль и разреши показ острова через специальные возможности.\n\nПрофиль хранится зашифрованным. Приложение не делает снимки экрана и не использует микрофон.","Настроить",{VpnSetupDialog.show(this){configuring=true;nextSetup()}},"Позже")}},350)
     }
     override fun onResume(){
@@ -91,7 +93,7 @@ class MainActivity:ComponentActivity(){
         val bottom=if(material)scheme.surfaceContainer.toArgb() else Color.BLACK
         window.statusBarColor=top;window.navigationBarColor=bottom;window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(top))
         val light=material&&!dark
-        window.insetsController?.setSystemBarsAppearance(if(light)android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS else 0,android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+        window.decorView.windowInsetsController?.setSystemBarsAppearance(if(light)android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS else 0,android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
     }
     private val xiaomi get()=Build.MANUFACTURER.equals("Xiaomi",true)||Build.BRAND.lowercase() in setOf("xiaomi","redmi","poco")
     /** Short device-specific steps: which screen assigns the assistant and which one binds it to the power key. */

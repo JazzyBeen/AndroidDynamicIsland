@@ -27,8 +27,8 @@ jobs:
         shell: pwsh
         run: ./scripts/BuildVpnCore.ps1 -AndroidHome $env:ANDROID_HOME -NdkHome (Join-Path $env:ANDROID_HOME 'ndk/28.0.13004108')
       - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x gradlew && ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+      - run: chmod +x gradlew && ./gradlew :app:assembleModernDebug :app:assembleLegacyDebug :app:testModernDebugUnitTest :app:lintModernDebug :app:lintLegacyDebug
       - uses: actions/upload-artifact@v4
         with:
           name: AndroidDynamicIsland-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/*/debug/*.apk

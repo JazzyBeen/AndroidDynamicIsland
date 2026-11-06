@@ -12,11 +12,16 @@ $oldJava=$env:JAVA_HOME;$oldCache=$env:GRADLE_USER_HOME;$oldOptions=$env:JAVA_TO
 try{
     $env:JAVA_HOME=$JavaHome;$env:GRADLE_USER_HOME=$CacheDirectory
     $env:JAVA_TOOL_OPTIONS=($oldOptions+' -Djava.io.tmpdir="'+$temporary+'" -Djdk.net.unixdomain.tmpdir="'+$temporary+'"').Trim()
-    $tasks=@(':app:assembleDebug');if($Release){$tasks=@(':app:assembleRelease')}
-    if($Test){$tasks+=@(':app:testDebugUnitTest',':app:lintDebug')}
+    # Two flavors: modern (Android 12+) and legacy (Android 11).
+    $kind=if($Release){'Release'}else{'Debug'}
+    $tasks=@(":app:assembleModern$kind",":app:assembleLegacy$kind")
+    if($Test){$tasks+=@(':app:testModernDebugUnitTest',':app:lintModernDebug',':app:lintLegacyDebug')}
     Push-Location $root
     try{& .\gradlew.bat @tasks --console=plain;if($LASTEXITCODE){throw 'Android build failed'}}finally{Pop-Location}
-    $kind=if($Release){'release'}else{'debug'}
-    $file=Join-Path $root ('app\build\outputs\apk\'+$kind+'\app-'+$kind+'.apk')
-    if(Test-Path -LiteralPath $file){$version=[regex]::Match((Get-Content -LiteralPath (Join-Path $root 'app\build.gradle.kts') -Raw),'versionName\s*=\s*"([^"]+)"').Groups[1].Value;$out=Join-Path $root 'artifacts';New-Item -ItemType Directory -Path $out -Force | Out-Null;Copy-Item -LiteralPath $file -Destination (Join-Path $out ('AndroidDynamicIsland-'+$version+'-'+$kind+'.apk')) -Force;Write-Output ('APK: '+$file)}
+    $version=[regex]::Match((Get-Content -LiteralPath (Join-Path $root 'app\build.gradle.kts') -Raw),'versionName\s*=\s*"([^"]+)"').Groups[1].Value
+    $out=Join-Path $root 'artifacts';New-Item -ItemType Directory -Path $out -Force | Out-Null
+    foreach($flavor in @(@('modern','android12plus'),@('legacy','android11'))){
+        $k=$kind.ToLower();$file=Join-Path $root ('app\build\outputs\apk\'+$flavor[0]+'\'+$k+'\app-'+$flavor[0]+'-'+$k+'.apk')
+        if(Test-Path -LiteralPath $file){Copy-Item -LiteralPath $file -Destination (Join-Path $out ('AndroidDynamicIsland-'+$version+'-'+$flavor[1]+'-'+$k+'.apk')) -Force;Write-Output ('APK: '+$file)}
+    }
 }finally{$env:JAVA_HOME=$oldJava;$env:GRADLE_USER_HOME=$oldCache;$env:JAVA_TOOL_OPTIONS=$oldOptions}
